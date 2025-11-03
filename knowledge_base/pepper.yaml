@@ -1,0 +1,176 @@
+# ====================================================================
+# Sarawak Black Pepper (Lada Hitam Sarawak) Knowledge Base
+# Version 3.0 - Synced with your final dataset folders
+# ====================================================================
+# This file is 100% aligned with your training data.
+# Each key below MUST EXACTLY match a folder name in your dataset.
+# Supported languages: en (English), ms (Bahasa Malaysia), zh (简体中文)
+# ====================================================================
+
+# --- From BLACK_PEPPER_DATASET ---
+
+Footrot:
+  name:
+    en: "Foot Rot (Phytophthora Blight)"
+    ms: "Reput Pangkal (Hawar Phytophthora)"
+    zh: "根腐病 (疫霉病/黑脚病)"
+  summary:
+    en: "This is very likely Foot Rot, the most destructive disease of black pepper, caused by the water mold Phytophthora capsici. It attacks the root system and collar region, leading to rapid wilting and plant death, especially in waterlogged conditions."
+    ms: "Ini kemungkinan besar Reput Pangkal, penyakit lada hitam yang paling merosakkan, disebabkan oleh kulapuk air Phytophthora capsici. Ia menyerang sistem akar dan pangkal pokok, menyebabkan kelayuan pantas dan kematian pokok, terutamanya dalam keadaan tanah yang tergenang air."
+    zh: "这极有可能是根腐病（黑脚病），黑胡椒最具毁灭性的病害，由辣椒疫霉菌引起。它主要攻击根系和茎基部，导致植株迅速萎蔫和死亡，尤其是在排水不良的土壤中。"
+  treatments:
+    - title:
+        en: "Prevention & Cultural Control"
+        ms: "Pencegahan & Kawalan Kultur"
+        zh: "预防与农业管理"
+      steps:
+        - en: "CRITICAL: Ensure excellent soil drainage. Plant on raised beds and avoid waterlogged areas."
+          ms: "KRITIKAL: Pastikan saliran tanah yang sangat baik. Tanam di atas batas yang ditinggikan dan elakkan kawasan bertakung air."
+          zh: "至关重要：确保土壤排水极佳。在抬高的畦上种植，避免任何形式的积水。"
+        - en: "Use certified disease-free planting materials. Avoid taking cuttings from infected gardens."
+          ms: "Gunakan bahan tanaman yang disahkan bebas penyakit. Elakkan mengambil keratan dari kebun yang dijangkiti."
+          zh: "使用经过认证的无病种苗。避免从疫区获取插条。"
+        - en: "Remove and burn all infected plants, including the entire root system, immediately."
+          ms: "Cabut dan bakar semua pokok yang dijangkiti dengan segera, termasuk keseluruhan sistem akar."
+          zh: "立即将病株连同整个根系彻底拔除并烧毁。"
+    - title:
+        en: "Chemical Control"
+        ms: "Kawalan Kimia"
+        zh: "化学防治"
+      steps:
+        - en: "Apply specific fungicides like metalaxyl or fosetyl-aluminium as a soil drench around the plant base. This is more effective as a preventative measure."
+          ms: "Gunakan racun kulat khusus seperti metalaxyl atau fosetyl-aluminium sebagai siraman tanah di sekeliling pangkal pokok. Ini lebih berkesan sebagai langkah pencegahan."
+          zh: "使用甲霜灵或三乙磷酸铝等特效杀菌剂，对植株基部的土壤进行浇灌。此方法作为预防措施时效果最佳。"
+
+Pollu_Disease:
+  name:
+    en: "Pollu Disease (Anthracnose)"
+    ms: "Penyakit Pollu (Antraknos)"
+    zh: "粒疫病 (炭疽病)"
+  summary:
+    en: "This is Pollu Disease, a form of Anthracnose that directly attacks the pepper berries (pollen), causing them to turn black, shrivel, and fall off, leading to significant yield loss."
+    ms: "Ini ialah Penyakit Pollu, sejenis Antraknos yang menyerang secara langsung buah lada (pollen), menyebabkannya menjadi hitam, kering, dan gugur, yang membawa kepada kehilangan hasil yang besar."
+    zh: "这是粒疫病，一种直接侵害胡椒果穗的炭疽病。它导致胡椒粒变黑、干瘪和脱落，造成严重的产量损失。"
+  treatments:
+    - title:
+        en: "Sanitation & Pruning"
+        ms: "Kebersihan & Pemangkasan"
+        zh: "卫生与修剪"
+      steps:
+        - en: "Prune the vines after harvest to improve air circulation and sunlight penetration. Burn all pruned material."
+          ms: "Pangkas pokok lada selepas menuai untuk meningkatkan peredaran udara dan penembusan cahaya matahari. Bakar semua bahan yang dipangkas."
+          zh: "采收后对藤蔓进行修剪，以改善通风和透光。将所有修剪下来的材料烧毁。"
+        - en: "Remove and destroy all infected spikes and fallen berries from the ground."
+          ms: "Buang dan musnahkan semua tandan dan buah yang gugur yang dijangkiti dari atas tanah."
+          zh: "清除并销毁所有受感染的果穗以及地面上的落果。"
+    - title:
+        en: "Chemical Control"
+        ms: "Kawalan Kimia"
+        zh: "化学防治"
+      steps:
+        - en: "Spray fungicides like carbendazim or mancozeb at the time of flowering and early berry development, especially if the weather is wet."
+          ms: "Sembur racun kulat seperti carbendazim atau mancozeb pada masa pembungaan dan perkembangan awal buah, terutamanya jika cuaca basah."
+          zh: "在开花期和果实发育早期，喷洒多菌灵或代森锰锌等杀菌剂，尤其是在潮湿天气下。"
+
+Slow-Decline:
+  name:
+    en: "Slow-Decline (Yellows Disease)"
+    ms: "Penyakit Kuning (Kemerosotan Perlahan)"
+    zh: "缓慢衰退病 (黄叶病)"
+  summary:
+    en: "This is likely Slow-Decline or Yellows Disease, a complex issue caused by a combination of root-knot nematodes and opportunistic fungi. It leads to a gradual yellowing, stunting, and decline in productivity over several years."
+    ms: "Ini kemungkinan Penyakit Kuning atau Kemerosotan Perlahan, satu isu kompleks yang disebabkan oleh gabungan nematod bintil akar dan kulat oportunis. Ia membawa kepada penguningan beransur-ansur, bantut, dan penurunan produktiviti selama beberapa tahun."
+    zh: "这很可能是缓慢衰退病（黄叶病），一个由根结线虫和机会性真菌复合侵染引起的复杂病害。它会导致植株在几年内逐渐黄化、矮化，产量下降。"
+  treatments:
+    - title:
+        en: "Soil & Planting Management"
+        ms: "Pengurusan Tanah & Penanaman"
+        zh: "土壤与种植管理"
+      steps:
+        - en: "Improve soil health by applying large amounts of organic matter (compost, manure) to encourage beneficial microbes that suppress nematodes."
+          ms: "Tingkatkan kesihatan tanah dengan menggunakan bahan organik dalam kuantiti yang banyak (kompos, najis haiwan) untuk menggalakkan mikrob berfaedah yang menekan nematod."
+          zh: "施用大量有机质（堆肥、农家肥）来改善土壤健康，促进抑制线虫的有益微生物生长。"
+        - en: "Examine roots for galls or knots (swellings). If present, chemical control is needed."
+          ms: "Periksa akar untuk bintil atau simpulan (bengkak). Jika ada, kawalan kimia diperlukan."
+          zh: "检查根系，寻找由线虫引起的根结（肿块）。如果发现根结，则需要进行化学防治。"
+    - title:
+        en: "Chemical Control (Nematicides)"
+        ms: "Kawalan Kimia (Nematicides)"
+        zh: "化学防治 (杀线剂)"
+      steps:
+        - en: "Apply nematicides like carbofuran or fluopyram to the soil basin. This should be done carefully and according to label instructions."
+          ms: "Gunakan nematicides seperti carbofuran atau fluopyram di pangkal pokok. Ini perlu dilakukan dengan berhati-hati dan mengikut arahan label."
+          zh: "在植株基部土壤施用克百威或氟吡菌酰胺等杀线剂。必须严格按照产品说明谨慎使用。"
+
+# --- From kaggle_black_pepper_dataset ---
+
+black_pepper_healthy:
+  name:
+    en: "Healthy"
+    ms: "Sihat"
+    zh: "健康"
+  summary:
+    en: "Congratulations! Based on the image analysis, your pepper plant appears healthy and vigorous, with no obvious signs of disease."
+    ms: "Tahniah! Berdasarkan analisis imej, tanaman lada anda kelihatan sihat dan subur, tanpa tanda-tanda penyakit yang jelas."
+    zh: "恭喜！根据图像分析，您的胡椒植株生长健康、茁壮，未发现明显的病害症状。"
+  treatments:
+    - title:
+        en: "Preventative Care & Best Practices"
+        ms: "Penjagaan Pencegahan & Amalan Terbaik"
+        zh: "预防性护理与最佳实践"
+      steps:
+        - en: "Continue good field management: ensure proper ventilation, balanced watering and fertilization, and regular inspection for early detection of pests or diseases."
+          ms: "Teruskan pengurusan ladang yang baik: pastikan pengudaraan yang betul, penyiraman dan pembajaan yang seimbang, serta pemeriksaan berkala untuk pengesanan awal perosak atau penyakit."
+          zh: "请继续保持良好的田间管理：确保通风良好，水肥均衡，并定期巡视，以便及早发现任何病虫害的迹象。"
+
+black_pepper_leaf_blight:
+  name:
+    en: "Leaf Blight"
+    ms: "Hawar Daun"
+    zh: "叶枯病"
+  summary:
+    en: "This appears to be Leaf Blight, often caused by Colletotrichum or Cercospora fungi. It typically starts as small, water-soaked lesions that expand into larger, necrotic (dead) patches on the leaves."
+    ms: "Ini kelihatan seperti Hawar Daun, selalunya disebabkan oleh kulat Colletotrichum atau Cercospora. Ia biasanya bermula sebagai lesi kecil berair yang membesar menjadi tompok nekrotik (mati) yang lebih besar pada daun."
+    zh: "这看起来是叶枯病，通常由炭疽菌或尾孢菌引起。它通常始于小的水浸状病斑，随后扩大为叶片上更大的坏死斑块。"
+  treatments:
+    - title:
+        en: "Sanitation"
+        ms: "Kebersihan"
+        zh: "田间卫生"
+      steps:
+        - en: "Remove and destroy infected leaves to reduce the source of inoculum."
+          ms: "Buang dan musnahkan daun yang dijangkiti untuk mengurangkan sumber inokulum."
+          zh: "移除并销毁受感染的叶片，以减少病原体来源。"
+    - title:
+        en: "Chemical Control"
+        ms: "Kawalan Kimia"
+        zh: "化学防治"
+      steps:
+        - en: "Apply a broad-spectrum fungicide containing mancozeb or chlorothalonil at regular intervals during wet weather."
+          ms: "Gunakan racun kulat spektrum luas yang mengandungi mancozeb atau chlorothalonil secara berkala semasa cuaca basah."
+          zh: "在潮湿天气期间，定期喷洒含有代森锰锌或百菌清的广谱杀菌剂。"
+
+black_pepper_yellow_mottle_virus:
+  name:
+    en: "Yellow Mottle Virus"
+    ms: "Virus Mottle Kuning"
+    zh: "黄斑驳病毒病"
+  summary:
+    en: "The symptoms are consistent with a viral infection, likely a mosaic or mottle virus. These viruses cause yellow and green patches on leaves, stunting, and leaf distortion. There is no chemical cure for viral diseases."
+    ms: "Gejala ini selaras dengan jangkitan virus, kemungkinan virus mozek atau mottle. Virus ini menyebabkan tompok kuning dan hijau pada daun, bantut, dan herotan daun. Tiada penawar kimia untuk penyakit virus."
+    zh: "这些症状与病毒感染一致，很可能是花叶或斑驳病毒。这类病毒会导致叶片出现黄绿相间的斑块、植株矮化和叶片畸形。病毒病没有化学药剂可以治愈。"
+  treatments:
+    - title:
+        en: "Management (No Cure)"
+        ms: "Pengurusan (Tiada Penawar)"
+        zh: "管理 (无法治愈)"
+      steps:
+        - en: "CRITICAL: Remove and destroy infected plants immediately to prevent the virus from spreading to healthy plants."
+          ms: "KRITIKAL: Cabut dan musnahkan pokok yang dijangkiti dengan serta-merta untuk mengelakkan virus merebak ke pokok yang sihat."
+          zh: "至关重要：立即拔除并销毁病株，以防止病毒通过昆虫媒介传播给健康植株。"
+        - en: "Control insect vectors, such as aphids and thrips, which spread the virus. Use appropriate insecticides."
+          ms: "Kawal serangga vektor, seperti afid dan thrips, yang menyebarkan virus. Gunakan racun serangga yang sesuai."
+          zh: "控制传播病毒的昆虫媒介，如蚜虫和蓟马。使用合适的杀虫剂。"
+        - en: "Keep the field free of weeds, as they can host the virus and its vectors."
+          ms: "Pastikan ladang bebas daripada rumpai, kerana ia boleh menjadi perumah bagi virus dan vektornya."
+          zh: "保持田间无杂草，因为杂草可能是病毒及其媒介的寄主。"

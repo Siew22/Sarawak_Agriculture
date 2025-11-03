@@ -1,0 +1,101 @@
+# Python
+# ===================================================================
+# Environments
+venv/
+.venv/
+env/
+ENV/
+*.env
+.env.*
+
+# Byte-compiled / optimized / C extensions
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# PyInstaller
+*.spec
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+.hypothesis/
+.pytest_cache/
+
+# IDE files
+# ===================================================================
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Datasets & Models - VERY IMPORTANT
+# ===================================================================
+# Large external datasets that are cloned separately
+# NEVER track this folder in Git.
+/PlantVillage-Dataset/
+
+# Datasets that are managed by the user locally but not versioned
+# Or intermediate/processed datasets
+/MasterDataset/
+/Datasets/
+
+# Trained models that are too large or should be versioned elsewhere
+# (Note: Your .gitattributes handles .pth, this is an extra safety layer)
+/models_store/*.pth
+/models_store/*.onnx
+
+# Temporary files and logs
+# ===================================================================
+/temp/
+*.log
+logs/
+.log
+log/
+
+# OS-specific files
+# ===================================================================
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+.Spotlight-V100
+.Trashes

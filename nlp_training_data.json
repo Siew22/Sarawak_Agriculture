@@ -1,0 +1,122 @@
+[
+  {
+    "text": "Early symptoms are small, dark, water-soaked, greasy-appearing spots on leaves.",
+    "label": "symptom"
+  },
+  {
+    "text": "As the disease progresses, these spots enlarge and may be surrounded by a yellow halo.",
+    "label": "symptom"
+  },
+  {
+    "text": "Affected fruit show circular lesions that become sunken and dark.",
+    "label": "symptom"
+  },
+  {
+    "text": "Leaves turn yellow and drop prematurely from the plant.",
+    "label": "symptom"
+  },
+  {
+    "text": "Stems may exhibit dark, elongated cankers near the soil line.",
+    "label": "symptom"
+  },
+  {
+    "text": "White, powdery fungal growth appears on the upper surface of leaves.",
+    "label": "symptom"
+  },
+  {
+    "text": "The most obvious sign is the wilting of the entire plant, even with moist soil.",
+    "label": "symptom"
+  },
+  {
+    "text": "Small, pin-prick size holes can be seen on the foliage.",
+    "label": "symptom"
+  },
+  {
+    "text": "Initial infections often appear on lower, older leaves.",
+    "label": "symptom"
+  },
+  {
+    "text": "The disease is characterized by concentric rings within the lesions, creating a 'target spot' appearance.",
+    "label": "symptom"
+  },
+  {
+    "text": "Remove and destroy all infected plant debris at the end of the season.",
+    "label": "treatment"
+  },
+  {
+    "text": "Apply a fungicide containing chlorothalonil or mancozeb on a 7- to 10-day schedule.",
+    "label": "treatment"
+  },
+  {
+    "text": "Switch to drip irrigation to avoid wetting the foliage.",
+    "label": "treatment"
+  },
+  {
+    "text": "Rotate crops with a non-host plant for at least two years.",
+    "label": "treatment"
+  },
+  {
+    "text": "Ensure proper plant spacing to promote good air circulation.",
+    "label": "treatment"
+  },
+  {
+    "text": "Use certified disease-free seeds or transplants.",
+    "label": "treatment"
+  },
+  {
+    "text": "Solarize the soil before planting to reduce pathogen populations.",
+    "label": "treatment"
+  },
+  {
+    "text": "Sprays of horticultural oils or neem oil can be effective in early stages.",
+    "label": "treatment"
+  },
+  {
+    "text": "Introduce beneficial insects like ladybugs to control aphid populations.",
+    "label": "treatment"
+  },
+  {
+    "text": "For severe infestations, consider using a systemic insecticide such as imidacloprid.",
+    "label": "treatment"
+  },
+  {
+    "text": "For more information, please contact our sales team.",
+    "label": "other"
+  },
+  {
+    "text": "This article was written by our team of expert agronomists.",
+    "label": "other"
+  },
+  {
+    "text": "Copyright © 2023 Agri-Solutions Inc. All Rights Reserved.",
+    "label": "other"
+  },
+  {
+    "text": "We use cookies to ensure you get the best experience on our website.",
+    "label": "other"
+  },
+  {
+    "text": "Check out our new line of premium fertilizers for higher yields.",
+    "label": "other"
+  },
+  {
+    "text": "Read our privacy policy to understand how we handle your data.",
+    "label": "other"
+  },
+  {
+    "text": "Related Articles: How to Grow Bigger Tomatoes.",
+    "label": "other"
+  },
+  {
+    "text": "The history of agriculture in this region is rich and varied.",
+    "label": "other"
+  },
+  {
+    "text": "Our company was founded in 1998 with a mission to help farmers.",
+    "label": "other"
+  },
+  {
+    "text": "Follow us on social media for the latest updates.",
+    "label": "other"
+  }
+]

@@ -1,0 +1,26 @@
+# .dockerignore
+
+# Git and other VCS folders
+.git
+.gitignore
+.dockerignore
+
+# Python virtual environments
+venv/
+.venv/
+env/
+ENV/
+
+# Python cache files
+**/__pycache__/
+*.pyc
+
+# Large Datasets - Do not include in the Docker image!
+/PlantVillage-Dataset/
+/Mydataset/
+/MasterDataset/
+/Datasets/
+
+# Temporary files and logs
+/temp/
+*.log
