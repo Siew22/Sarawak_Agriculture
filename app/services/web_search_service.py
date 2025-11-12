@@ -4,16 +4,17 @@ import os
 import requests
 from bs4 import BeautifulSoup
 from serpapi import GoogleSearch
-from dotenv import load_dotenv
+#from dotenv import load_dotenv
 from typing import Dict, Any, Optional
 from urllib.parse import urlparse
+from ..config import settings
 
 # 加载 .env 文件中的环境变量
-load_dotenv()
+#load_dotenv()
 
 class WebSearchService:
     def __init__(self):
-        self.api_key = os.getenv("SERPAPI_KEY")
+        self.api_key = settings.SERPAPI_KEY
         if not self.api_key:
             print("警告: 未找到 SERPAPI_KEY 环境变量。网络搜索功能将不可用。")
 

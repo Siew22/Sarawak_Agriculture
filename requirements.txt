@@ -62,3 +62,8 @@ lxml_html_clean==0.1.1
 celery==5.4.0
 redis==5.0.4
 #salesforce-lavis==1.0.2
+fastapi[all]
+sqlalchemy
+pymysql
+passlib[bcrypt]
+python-jose[cryptography]

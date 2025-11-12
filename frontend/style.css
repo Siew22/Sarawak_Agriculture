@@ -1,0 +1,308 @@
+:root {
+    --primary-glow: #00aaff;
+    --secondary-glow: #aa00ff;
+    --bg-color: #0d0a1a;
+    --surface-color: rgba(23, 17, 48, 0.85);
+    --text-color: #e0e0e0;
+    --text-secondary: #a0a0c0;
+    --border-color: rgba(170, 0, 255, 0.3);
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    margin: 0;
+    overflow: hidden;
+    position: relative;
+    min-height: 100vh;
+}
+
+/* --- 神经网络动态背景 --- */
+.background-animation {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: -1;
+}
+
+.ball {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(80px);
+    opacity: 0.5;
+    will-change: transform;
+}
+
+.ball:nth-child(1) { width: 450px; height: 450px; background: var(--primary-glow); animation: move 20s infinite alternate; }
+.ball:nth-child(2) { width: 500px; height: 500px; background: var(--secondary-glow); animation: move 25s infinite alternate-reverse; }
+.ball:nth-child(3) { width: 300px; height: 300px; background: #ffaa00; animation: move 30s infinite alternate; }
+
+@keyframes move {
+    0% { transform: translate(-20vw, -20vh) scale(0.8); }
+    50% { transform: translate(50vw, 40vh) scale(1.2); }
+    100% { transform: translate(20vw, 80vh) scale(0.9); }
+}
+
+/* --- 登录/注册页面通用样式 --- */
+.auth-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    height: 100vh;
+    position: absolute;
+    top: 0;
+    left: 0;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.5s, visibility 0.5s;
+    padding: 20px;
+    box-sizing: border-box;
+}
+
+.auth-container.active {
+    opacity: 1;
+    visibility: visible;
+}
+
+.auth-box {
+    width: 100%;
+    max-width: 400px;
+    background: var(--surface-color);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 40px;
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
+    text-align: center;
+}
+
+h1, h2 {
+    color: white;
+    margin-top: 0;
+    margin-bottom: 30px;
+    font-weight: 600;
+}
+
+input, select {
+    width: 100%;
+    padding: 12px 15px;
+    margin-bottom: 15px;
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    color: var(--text-color);
+    box-sizing: border-box;
+    font-size: 1em;
+    font-family: inherit;
+}
+
+input::placeholder {
+    color: var(--text-secondary);
+}
+
+.glow-button {
+    width: 100%;
+    padding: 12px;
+    margin-top: 10px;
+    border: none;
+    border-radius: 8px;
+    background: linear-gradient(90deg, var(--primary-glow), var(--secondary-glow));
+    color: white;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s;
+    box-shadow: 0 0 15px rgba(170, 0, 255, 0.5);
+}
+.glow-button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 0 25px rgba(0, 170, 255, 0.7);
+}
+
+.switch-view {
+    margin-top: 20px;
+    font-size: 0.9em;
+    color: var(--text-secondary);
+}
+.switch-view a {
+    color: var(--primary-glow);
+    text-decoration: none;
+    font-weight: bold;
+}
+
+.choice-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+.choice-btn {
+    padding: 15px;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    background: rgba(0, 0, 0, 0.2);
+    color: white;
+    font-size: 16px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+.choice-btn:hover {
+    background: var(--secondary-glow);
+}
+
+.hidden {
+    display: none;
+}
+.error-message {
+    color: #ff4d4d;
+    font-size: 0.9em;
+    margin-top: 10px;
+    height: 1em; /* Reserve space to prevent layout shift */
+}
+
+/* --- Business Form 美化 (最终版) --- */
+.option-group {
+    text-align: center;
+    margin-bottom: 25px;
+}
+
+.option-group-title {
+    color: var(--text-secondary);
+    margin-bottom: 15px;
+    font-size: 0.9em;
+}
+
+.options {
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+}
+
+.options input[type="radio"] {
+    display: none;
+}
+
+.options label {
+    color: var(--text-secondary);
+    cursor: pointer;
+    padding: 5px 10px;
+    border-radius: 5px;
+    transition: color 0.2s, background-color 0.2s;
+}
+
+.options input[type="radio"]:checked + label {
+    color: white;
+    font-weight: bold;
+}
+
+.options label:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+.file-input-wrapper {
+    margin-bottom: 15px;
+}
+.file-input {
+    display: none;
+}
+.file-input-label {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    padding: 12px 15px;
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    color: var(--text-secondary);
+    box-sizing: border-box;
+    cursor: pointer;
+    transition: border-color 0.2s;
+}
+.file-input-label:hover {
+    border-color: var(--primary-glow);
+}
+.file-input-button {
+    padding: 6px 12px;
+    background-color: rgba(255, 255, 255, 0.1);
+    border-radius: 5px;
+    color: var(--text-color);
+    white-space: nowrap;
+}
+
+/* --- 仪表盘 (Dashboard) 页面样式 --- */
+.dashboard-container {
+    width: 100%;
+    max-width: 1200px;
+    margin: 20px auto;
+    padding: 20px;
+    box-sizing: border-box;
+}
+
+header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px 30px;
+    background: var(--surface-color);
+    border-bottom: 1px solid var(--border-color);
+    border-radius: 12px;
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
+}
+.logo { font-size: 1.5em; font-weight: bold; }
+.logo span { background: linear-gradient(90deg, var(--primary-glow), var(--secondary-glow)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+
+nav a, .nav-button {
+    color: var(--text-secondary);
+    text-decoration: none;
+    margin: 0 15px;
+    font-weight: 500;
+    transition: color 0.2s;
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 1em;
+    font-family: inherit;
+}
+nav a:hover, .nav-button:hover { color: white; }
+
+#logoutButton {
+    padding: 8px 15px;
+    border-radius: 8px;
+    background: linear-gradient(90deg, var(--primary-glow), var(--secondary-glow));
+    color: white;
+}
+
+main {
+    margin-top: 20px;
+}
+
+.view-content {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 20px;
+}
+
+.card {
+    background: var(--surface-color);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 20px;
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
+}
+
+.card h3 {
+    margin-top: 0;
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 10px;
+    margin-bottom: 15px;
+}
+
+.full-width {
+    grid-column: 1 / -1;
+}

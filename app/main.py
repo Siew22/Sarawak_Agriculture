@@ -7,6 +7,10 @@ import os
 import uuid
 from pathlib import Path
 from typing import Dict, Any, Optional
+from app import database # 只导入 database 模块
+# 所有模型现在都在 database.py 里，Base 也在里面
+database.Base.metadata.create_all(bind=database.engine)
+
 
 # --- 关键优化：在所有其他导入之前，安全地配置matplotlib ---
 temp_mpl_dir = Path(__file__).resolve().parent.parent / "temp" / "mpl_config"
@@ -19,6 +23,7 @@ from fastapi import FastAPI, File, UploadFile, HTTPException, Form, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from loguru import logger # 统一使用 Loguru
+from .routers import users
 
 # --- 关键优化：分组导入，更清晰 ---
 # 导入应用配置
@@ -49,15 +54,17 @@ app = FastAPI(
     contact={"name": "Siew Seng", "email": "your_email@example.com"},
 )
 
+app.include_router(users.router)
+
 # 挂载静态文件目录
 static_path = Path(__file__).resolve().parent.parent / "static"
 os.makedirs(static_path / "xai_images", exist_ok=True) # 确保XAI图片文件夹存在
 app.mount("/static", StaticFiles(directory=static_path), name="static")
 
-# 配置CORS中间件
+# --- 配置CORS中间件 (生产级别) ---
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=settings.ALLOWED_ORIGINS_LIST, # <--- 从配置中动态读取
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
