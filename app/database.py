@@ -29,7 +29,7 @@ Base = declarative_base()
 #  (之前在 sql_models.py 中的内容)
 # ====================================================================
 
-# --- 用户模型 ---
+# --- 用户模型 (已升级) ---
 class User(Base):
     __tablename__ = "users"
 
@@ -37,12 +37,29 @@ class User(Base):
     email = Column(String(255), unique=True, index=True, nullable=False)
     hashed_password = Column(String(255), nullable=False)
     user_type = Column(String(50), nullable=False, default='public')
-    is_active = Column(Boolean, default=True)
+    
+    # --- 新增的验证字段 ---
+    is_active = Column(Boolean, default=False) # 默认未激活，直到邮箱验证
+    is_email_verified = Column(Boolean, default=False)
+    
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
     
+    # 关系保持不变
     profile = relationship("Profile", back_populates="owner", uselist=False)
     diagnoses = relationship("DiagnosisHistory", back_populates="user")
     products = relationship("Product", back_populates="seller")
+
+# --- (新) 验证码模型 ---
+class VerificationCode(Base):
+    __tablename__ = "verification_codes"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"))
+    code = Column(String(10), index=True, nullable=False)
+    purpose = Column(String(50), nullable=False) # e.g., 'signup_verification'
+    expires_at = Column(DateTime, nullable=False)
+    is_used = Column(Boolean, default=False)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
 
 # --- 用户详细信息模型 ---
 class Profile(Base):
