@@ -1,225 +1,244 @@
-# app/main.py (为你重构和优化的最终专业版)
-
-# -----------------------------------------------------------------------------
-# 1. 启动与配置 (Startup & Configuration)
-# -----------------------------------------------------------------------------
+# ====================================================================
+#  app/main.py (Final & Complete Version)
+# ====================================================================
 import os
-import uuid
 from pathlib import Path
-from typing import Dict, Any, Optional
-from app import database # 只导入 database 模块
-# 所有模型现在都在 database.py 里，Base 也在里面
-database.Base.metadata.create_all(bind=database.engine)
 
-
-# --- 关键优化：在所有其他导入之前，安全地配置matplotlib ---
+# --- 关键修复：在所有其他导入之前，安全地配置matplotlib ---
+# 这会告诉 matplotlib 使用项目内部的一个临时文件夹来存放它的缓存，
+# 从而彻底避免在用户主目录下的权限问题。
 temp_mpl_dir = Path(__file__).resolve().parent.parent / "temp" / "mpl_config"
 os.makedirs(temp_mpl_dir, exist_ok=True)
 os.environ['MPLCONFIGDIR'] = str(temp_mpl_dir)
-# --- 修改结束 ---
 
-import torch
-from fastapi import FastAPI, File, UploadFile, HTTPException, Form, Depends
+
+# ====================================================================
+#  Part 2: Standard Imports
+#  现在可以安全地导入其他所有模块了
+# ====================================================================
+import uuid
+import shutil
+from typing import Dict, Any, Optional
+
+from fastapi import (
+    FastAPI, File, UploadFile, HTTPException,
+    Form, Depends, Header, status
+)
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from loguru import logger # 统一使用 Loguru
-from .routers import users
+from loguru import logger
+import torch
+from sqlalchemy.orm import Session
 
-# --- 关键优化：分组导入，更清晰 ---
-# 导入应用配置
-from .config import settings
-# 导入数据模型 (Schemas)
-from .schemas.diagnosis import FullDiagnosisReport, PredictionResult
-from .schemas.prediction import RiskPredictionResponse
-# 导入核心服务和工具
-from .utils.image_processing import image_processor
-from .utils.xai_generator import xai_generator, save_xai_image
-from .models.disease_classifier import classifier
-from .models.risk_assessor import risk_assessor
-from .models.recommendation_generator import report_generator_v3 as report_generator
-from .services.weather_service import weather_service
-from .services.disease_predictor_service import disease_predictor_service
-from .services.knowledge_discovery_service import knowledge_discovery_service
-from .background_tasks import trigger_background_retraining
-from .services.data_management_service import data_management_service # 假设我们有一个新服务来管理数据
-from .services.knowledge_base_service import kb_service
-# --- 导入结束 ---
+# --- 关键：将数据库初始化放在应用逻辑的最前面 ---
+from app import database
+database.Base.metadata.create_all(bind=database.engine)
 
-# --- 应用初始化 ---
+# --- 应用模块导入 ---
+from app.config import settings
+from app.schemas import diagnosis as schemas_diagnosis
+from app.schemas import prediction as schemas_prediction
+from app.utils import image_processing, xai_generator
+from app.models import disease_classifier, risk_assessor, recommendation_generator
+
+# --- 关键修复：从具体的文件导入，而不是从文件夹导入 ---
+from app.services.weather_service import weather_service
+from app.services.disease_predictor_service import disease_predictor_service
+from app.services.knowledge_discovery_service import knowledge_discovery_service
+from app.services.data_management_service import data_management_service
+from app.services.knowledge_base_service import kb_service
+
+from app.background_tasks import trigger_background_retraining
+from app.routers import users, token
+from app import crud
+from app.auth import security
+
+# --- 配置 Matplotlib (解决服务器渲染问题) ---
+temp_mpl_dir = Path(__file__).resolve().parent.parent / "temp" / "mpl_config"
+os.makedirs(temp_mpl_dir, exist_ok=True)
+os.environ['MPLCONFIGDIR'] = str(temp_mpl_dir)
+
+# ====================================================================
+#  Part 3: FastAPI Application Setup
+# ====================================================================
 app = FastAPI(
     title=settings.PROJECT_NAME,
-    description="一个基于AI和软计算的智能农业诊断系统。V3.0实现了XAI模型可解释性与未来病害风险预测。",
-    version="3.0.0",
-    # 可以在这里添加更多OpenAPI元数据
-    contact={"name": "Siew Seng", "email": "your_email@example.com"},
+    description="An AI-powered agricultural diagnosis system with XAI and disease prediction.",
+    version="3.1.0",
 )
 
-app.include_router(users.router)
-
-# 挂载静态文件目录
-static_path = Path(__file__).resolve().parent.parent / "static"
-os.makedirs(static_path / "xai_images", exist_ok=True) # 确保XAI图片文件夹存在
-app.mount("/static", StaticFiles(directory=static_path), name="static")
-
-# --- 配置CORS中间件 (生产级别) ---
+# --- 中间件与路由 ---
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.ALLOWED_ORIGINS_LIST, # <--- 从配置中动态读取
+    allow_origins=settings.ALLOWED_ORIGINS_LIST,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# -----------------------------------------------------------------------------
-# 2. API生命周期事件 (Lifecycle Events)
-# -----------------------------------------------------------------------------
+static_path = Path(__file__).resolve().parent.parent / "static"
+os.makedirs(static_path / "uploads", exist_ok=True)
+os.makedirs(static_path / "xai_images", exist_ok=True)
+app.mount("/static", StaticFiles(directory=static_path), name="static")
+
+app.include_router(users.router)
+app.include_router(token.router)
+
+# --- API 生命周期 ---
 @app.on_event("startup")
 async def startup_event():
-    logger.info(f"启动 {settings.PROJECT_NAME} API v3.0...")
-    logger.info(f"AI模型已在设备 {classifier.device} 上准备就绪。")
-    if xai_generator: logger.info("XAI (Grad-CAM) 模块已成功初始化。")
-    else: logger.warning("XAI (Grad-CAM) 模块初始化失败。")
-    logger.info("所有服务和模块已初始化。应用启动完成。")
+    logger.info(f"Starting up {settings.PROJECT_NAME} API v3.1...")
+    logger.info(f"AI model ready on device: {disease_classifier.classifier.device}")
+    if xai_generator.xai_generator:
+        logger.info("XAI (Grad-CAM) module initialized.")
+    else:
+        logger.warning("XAI (Grad-CAM) module failed to initialize.")
+    logger.info("Application startup complete.")
 
 @app.on_event("shutdown")
 async def shutdown_event():
-    logger.info(f"关闭 {settings.PROJECT_NAME} API...")
+    logger.info(f"Shutting down {settings.PROJECT_NAME} API...")
 
-# -----------------------------------------------------------------------------
-# 3. 依赖注入 (Dependency Injection)
-# -----------------------------------------------------------------------------
-async def get_weather_data(
-    latitude: float = Form(..., description="用户设备的GPS纬度", ge=-90, le=90),
-    longitude: float = Form(..., description="用户设备的GPS经度", ge=-180, le=180)
-) -> Dict[str, Any]:
+# --- 依赖注入 ---
+async def get_weather_data(latitude: float = Form(...), longitude: float = Form(...)) -> Dict[str, Any]:
     try:
         weather_data = await weather_service.get_current_weather(latitude, longitude)
-        logger.info(f"获取当前天气成功: Temp={weather_data['temperature']}°C, Humidity={weather_data['humidity']}%")
+        logger.info(f"Weather data retrieved: Temp={weather_data['temperature']}°C, Humidity={weather_data['humidity']}%")
         return weather_data
     except ConnectionError as e:
-        logger.error(f"天气服务连接失败: {e}")
-        raise HTTPException(status_code=503, detail="天气服务当前不可用，请稍后再试。")
+        logger.error(f"Weather service connection failed: {e}")
+        raise HTTPException(status_code=503, detail="Weather service is currently unavailable.")
 
-# -----------------------------------------------------------------------------
-# 4. API 端点 (API Endpoints)
-# -----------------------------------------------------------------------------
-@app.get("/", summary="API 健康检查", tags=["General"])
+async def get_current_user(token: str = Header(..., alias="Authorization"), db: Session = Depends(database.get_db)) -> database.User:
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Could not validate credentials",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+    if not token.startswith("Bearer "):
+        raise credentials_exception
+    
+    token_value = token.split(" ")[1]
+    email = security.verify_token(token_value, credentials_exception)
+    user = crud.get_user_by_email(db, email=email)
+    if user is None:
+        raise credentials_exception
+    return user
+
+# --- API 端点 ---
+@app.get("/", summary="API Health Check", tags=["General"])
 def read_root():
-    return {"status": "ok", "message": f"欢迎使用 {settings.PROJECT_NAME} API V3！"}
+    return {"status": "ok", "message": f"Welcome to {settings.PROJECT_NAME} API!"}
 
-@app.post("/diagnose", response_model=FullDiagnosisReport, summary="获取或探索作物健康诊断报告", tags=["Diagnosis"])
+@app.post("/diagnose", response_model=schemas_diagnosis.FullDiagnosisReport, summary="Get crop health diagnosis", tags=["Diagnosis"])
 async def create_diagnosis_report(
-    image: UploadFile = File(..., description="待诊断的作物叶片图片"),
+    image: UploadFile = File(...),
+    language: str = Form("en", enum=["en", "ms", "zh"]),
     weather: Dict[str, Any] = Depends(get_weather_data),
-    language: str = Form("en", description="期望的报告语言 (en, ms, zh)", enum=["en", "ms", "zh"])
+    current_user: database.User = Depends(get_current_user),
+    db: Session = Depends(database.get_db)
 ):
+    logger.info(f"User '{current_user.email}' (ID: {current_user.id}) performing diagnosis.")
+    
+    # 1. 保存上传的图片
     try:
+        file_extension = Path(image.filename).suffix.lower()
+        if file_extension not in [".jpg", ".jpeg", ".png"]:
+            raise HTTPException(status_code=400, detail="Invalid image file type.")
+            
+        unique_filename = f"{uuid.uuid4().hex}{file_extension}"
+        file_path = static_path / "uploads" / unique_filename
+        
+        # 使用 aiofiles 进行异步文件写入会更高效，但为了简单，先用同步方式
+        with open(file_path, "wb") as buffer:
+            shutil.copyfileobj(image.file, buffer)
+        
+        image_url = f"/static/uploads/{unique_filename}"
+        
+        image.file.seek(0)
         image_bytes = await image.read()
-        image_tensor = image_processor.process(image_bytes)
         
-        prediction = classifier.predict(image_tensor)
-        logger.info(f"模型最高预测: {prediction}")
+    except Exception as e:
+        logger.error(f"Failed to save uploaded file: {e}")
+        raise HTTPException(status_code=500, detail="Error saving image file.")
 
-        risk = risk_assessor.assess(weather["temperature"], weather["humidity"])
-        logger.info(f"环境风险评估: Level={risk.risk_level}, Score={risk.risk_score:.2f}")
+    # 2. 执行诊断
+    try:
+        image_tensor = image_processing.image_processor.process(image_bytes)
+        prediction = disease_classifier.classifier.predict(image_tensor)
+        risk = risk_assessor.risk_assessor.assess(weather["temperature"], weather["humidity"])
+        
+        logger.info(f"Model prediction: {prediction}")
+        logger.info(f"Environmental risk: {risk}")
 
-        # --- ↓↓↓ 终极的“自学习”逻辑框架！↓↓↓ ---
-        
-        if prediction.confidence < settings.CONFIDENCE_THRESHOLD or prediction.disease == "未知病害":
-            # 情况一：AI不认识，触发“探索与学习”模式
-            logger.warning(f"置信度 ({prediction.confidence:.2%}) 过低，触发“探索与学习”模式...")
-            
-            # 1. 知识发现
-            new_knowledge, new_images = await knowledge_discovery_service.discover(image_bytes, language)
-            
-            if new_knowledge:
-                # 2. 自动扩充数据和知识库
-                logger.info("发现新知识！正在自动扩充数据集...")
-                new_class_name = data_management_service.add_new_images(new_images) # 将新图片存入新类别文件夹
-                kb_service.add_new_entry(new_class_name, new_knowledge)
-                # nlg_service.add_new_training_data(...) # 扩充NLG教材
-                
-                # 3. 触发后台自动再训练 (这是一个异步任务，会立即返回)
-                logger.info("数据已扩充，正在触发后台自动再训练...")
-                trigger_background_retraining.delay()
-                
-                # 4. 将本次发现的新知识，实时地、动态地生成报告返回给用户
-                logger.info("正在为用户生成本次发现的临时报告...")
-                report = report_generator.generate_from_new_knowledge(new_knowledge, risk, language)
-                
-            else:
-                # 如果网络搜索也失败了，才返回最终的“未知”报告
-                logger.warning("网络探索失败，返回标准的不确定报告。")
-                report = report_generator.generate(prediction, risk, lang=language)
-        
-        else:
-            # 情况二：AI认识，走正常流程
-            logger.info("高置信度诊断，生成标准报告。")
-            report = report_generator.generate(prediction, risk, lang=language)
-        
-        # --- ↑↑↑ 自学习逻辑结束 ↑↑↑ ---
-        
-        # 5. 生成XAI并附加到报告
-        if xai_generator and report:
+        report = recommendation_generator.report_generator_v3.generate(prediction, risk, lang=language)
+
+        # 3. 生成XAI
+        if xai_generator.xai_generator and report:
             xai_url = await _generate_and_attach_xai(image_tensor, image_bytes, prediction.disease)
             if xai_url:
                 report.xai_image_url = xai_url
+
+        # 4. 保存诊断历史到数据库
+        try:
+            crud.create_diagnosis_history(
+                db=db,
+                user_id=current_user.id,
+                report=report,
+                prediction=prediction,
+                risk=risk,
+                image_url=image_url
+            )
+            logger.success(f"Diagnosis history saved for user ID: {current_user.id}")
+        except Exception as e:
+            logger.error(f"Failed to save diagnosis history to DB: {e}")
+            # Do not fail the request if history saving fails, just log it.
         
         return report
 
     except Exception as e:
-        logger.error(f"处理诊断请求时发生未知服务器错误: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail="服务器内部发生意外错误。")
+        logger.error(f"An unexpected error occurred during diagnosis: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="An internal error occurred during diagnosis.")
 
-@app.post("/predict_risk", response_model=RiskPredictionResponse, summary="预测未来7天病害爆发风险", tags=["Prediction"])
+async def _generate_and_attach_xai(image_tensor, image_bytes, predicted_class):
+    try:
+        target_idx = disease_classifier.classifier.get_class_index(predicted_class)
+        if target_idx is None:
+            logger.warning(f"Cannot find class index for '{predicted_class}' in XAI.")
+            return None
+        heatmap = xai_generator.xai_generator.generate_heatmap(image_tensor, image_bytes, target_idx)
+        unique_filename = f"xai_{uuid.uuid4().hex}"
+        xai_generator.save_xai_image(heatmap, unique_filename)
+        return f"/static/xai_images/{unique_filename}.jpg"
+    except Exception as e:
+        logger.error(f"Failed to generate XAI heatmap: {e}", exc_info=True)
+        return None
+
+@app.post("/predict_risk", response_model=schemas_prediction.RiskPredictionResponse, summary="Predict future 7-day disease risk", tags=["Prediction"])
 async def predict_disease_risk(
-    latitude: float = Form(..., description="用户设备的GPS纬度"),
-    longitude: float = Form(..., description="用户设备的GPS经度"),
-    disease_key: str = Form(..., description="要预测的病害内部密钥 (例如 'Footrot')")
+    latitude: float = Form(...),
+    longitude: float = Form(...),
+    disease_key: str = Form(...)
 ):
     try:
         forecast_data = await weather_service.get_7_day_forecast(latitude, longitude)
-        # --- 关键优化：更健壮的空值检查 ---
-        if not forecast_data or not forecast_data.get("time"):
-            raise HTTPException(status_code=503, detail="无法获取有效的天气预报数据，请稍后再试。")
+        if not forecast_data:
+            raise HTTPException(status_code=503, detail="Unable to retrieve valid weather forecast data.")
 
         daily_risks = disease_predictor_service.predict_daily_risk(forecast_data, disease_key)
-        disease_name = disease_predictor_service.get_disease_display_name(disease_key)
+        disease_name = "Unknown Disease" # Fallback
         
-        return RiskPredictionResponse(
+        kb_info = kb_service.get_disease_info(disease_key)
+        if kb_info and kb_info.get("name"):
+            disease_name = kb_info.get("name").get("en", disease_key)
+        
+        return schemas_prediction.RiskPredictionResponse(
             disease_name=disease_name,
             location={"latitude": latitude, "longitude": longitude},
             daily_risks=daily_risks
         )
-    except (ValueError, KeyError) as e:
-        # 捕获已知的数据或逻辑错误，返回 400 Bad Request
+    except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
-        logger.error(f"预测风险时发生未知错误: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail="服务器内部错误，无法完成风险预测。")
-
-# -----------------------------------------------------------------------------
-# 5. 辅助函数 (Helper Functions)
-# -----------------------------------------------------------------------------
-async def _generate_and_attach_xai(image_tensor: torch.Tensor, image_bytes: bytes, predicted_class: str) -> Optional[str]:
-    """辅助函数，将XAI生成逻辑从主API端点中分离出来，增加了更精确的类型注解。"""
-    try:
-        target_idx = classifier.get_class_index(predicted_class)
-        if target_idx is None:
-            logger.warning(f"在XAI生成中找不到类别 '{predicted_class}' 的索引。")
-            return None
-
-        logger.info("正在生成XAI (Grad-CAM) 热力图...")
-        heatmap_image = xai_generator.generate_heatmap(
-            image_tensor=image_tensor.to(classifier.device),
-            image_bytes=image_bytes,
-            target_category=target_idx
-        )
-        
-        unique_filename = f"xai_{uuid.uuid4().hex}"
-        save_xai_image(heatmap_image, unique_filename)
-        
-        return f"/static/xai_images/{unique_filename}.jpg"
-    except Exception as e:
-        logger.error(f"生成XAI热力图时失败: {e}", exc_info=True)
-        return None
+        logger.error(f"Error during risk prediction: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error during risk prediction.")

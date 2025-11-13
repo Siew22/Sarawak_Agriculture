@@ -1,28 +1,35 @@
 from pydantic_settings import BaseSettings
 from typing import Optional, List
 from urllib.parse import quote_plus
-from dotenv import load_dotenv # <--- 导入
-import os
-# from urllib.parse import quote_plus # <--- 在这里不再需要
-
-# --- 强制加载 .env 文件 ---
-# 这会确保在任何配置被读取之前，.env 文件的内容都已加载到环境变量中
-load_dotenv()
 
 class Settings(BaseSettings):
+    """
+    Loads ALL application settings from the .env file.
+    """
+    
+    # --- Database Configuration ---
     DB_HOST: str
     DB_PORT: int
     DB_USER: str
     DB_PASSWORD: str
     DB_NAME: str
+
+    # --- Application Core Settings ---
     PROJECT_NAME: str
+    CONFIDENCE_THRESHOLD: float = 0.75
+
+    # --- External APIs ---
     SERPAPI_KEY: Optional[str] = None
-    ALLOWED_ORIGINS: str
-    SMTP_SERVER: str
-    SMTP_PORT: int
+    RESEND_API_KEY: Optional[str] = None # <--- 已添加
+    
+    # --- Email Configuration (for SMTP) ---
+    SMTP_SERVER: Optional[str] = None # <--- 已添加
+    SMTP_PORT: Optional[int] = None   # <--- 已添加
     SENDER_EMAIL: str
-    SENDER_PASSWORD: str
-    RESEND_API_KEY: str
+    SENDER_PASSWORD: Optional[str] = None # <--- 已添加 (App Password)
+    
+    # --- CORS Configuration ---
+    ALLOWED_ORIGINS: str
 
     @property
     def ALLOWED_ORIGINS_LIST(self) -> List[str]:

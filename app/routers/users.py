@@ -1,62 +1,101 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Response
+from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
+
+# 使用绝对路径导入，确保稳定性
 from app import crud, database
 from app.auth import schemas as auth_schemas
+from app.auth import security
 from app.database import get_db
-from app.services import email_service # 导入邮件服务
+from app.services import email_service
+
+# ====================================================================
+#  Router Configuration
+# ====================================================================
 
 router = APIRouter(
     prefix="/users",
     tags=["Users"],
 )
 
-@router.post("/", status_code=status.HTTP_201_CREATED)
+# OAuth2 scheme for token dependency
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/token")
+
+# ====================================================================
+#  Dependency for Getting Current User
+# ====================================================================
+
+async def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
+    """
+    Dependency to get the current user from a JWT token.
+    Protects routes that require a logged-in user.
+    """
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Could not validate credentials",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+    email = security.verify_token(token, credentials_exception)
+    user = crud.get_user_by_email(db, email=email)
+    if user is None:
+        raise credentials_exception
+    return user
+
+# ====================================================================
+#  API Endpoints
+# ====================================================================
+
+@router.post("/", status_code=status.HTTP_201_CREATED, summary="Create a new user and send verification email")
 def create_user_signup(user: auth_schemas.UserCreate, db: Session = Depends(get_db)):
-    # 检查 Email 和 IC No. 是否已存在
+    """
+    Handles new user registration.
+    - Checks if email or IC number already exist.
+    - Creates the user and profile.
+    - Creates a verification code.
+    - Sends the verification code via email.
+    """
+    # Check 1: Email existence
     if crud.get_user_by_email(db, email=user.email):
         raise HTTPException(status_code=400, detail="Email already registered")
-    if crud.get_profile_by_ic_no(db, ic_no=user.ic_no):
+    
+    # Check 2: IC number existence
+    if user.ic_no and crud.get_profile_by_ic_no(db, ic_no=user.ic_no):
         raise HTTPException(status_code=400, detail="IC number already registered")
 
-    # 1. 创建用户 (但此时 is_active=False)
+    # Create user in the database
     new_user = crud.create_user(db=db, user=user)
     
-    # 2. 在数据库中为该用户创建一个验证码
+    # Create and send verification code
     try:
         verification_code = crud.create_verification_code(
             db, user_id=new_user.id, purpose="signup_verification"
         )
+        success = email_service.send_verification_email(
+            recipient_email=new_user.email, code=verification_code
+        )
+        if not success:
+            # Raise a service unavailable error if email sending fails
+            raise HTTPException(status_code=503, detail="Could not send verification email. Please try again later.")
     except Exception as e:
-        # 如果数据库操作失败，需要给出错误提示
-        print(f"Error creating verification code: {e}")
-        raise HTTPException(status_code=500, detail="Could not process signup, please try again.")
-
-    # 3. 调用邮件服务发送这个验证码
-    success = email_service.send_verification_email(
-        recipient_email=new_user.email, code=verification_code
-    )
+        print(f"Error during verification code sending: {e}")
+        raise HTTPException(status_code=500, detail="An error occurred during the signup process.")
     
-    if not success:
-        # 如果邮件发送失败，这是一个严重的系统问题
-        # 我们应该告诉前端，但仍然要完成注册流程
-        print(f"CRITICAL: Failed to send verification email to {new_user.email}")
-        # 在生产环境中，这里应该有更复杂的错误处理，比如重试机制
-        # 但对于用户来说，我们可以提示他们联系客服或重试
-        raise HTTPException(status_code=503, detail="Could not send verification email. Please try again later.")
-    
-    # 4. 返回成功信息，并附上 user_id 以便下一步验证
     return {
         "message": "Signup successful! A verification code has been sent to your email.",
         "user_id": new_user.id
     }
 
-# (新) 创建验证API
-@router.post("/verify-email", status_code=status.HTTP_200_OK)
+
+@router.post("/verify-email", status_code=status.HTTP_200_OK, summary="Verify user's email with a code")
 def verify_email_with_code(
     user_id: int,
     code: str,
     db: Session = Depends(get_db)
 ):
+    """
+    Verifies the 6-digit code sent to the user's email.
+    If successful, activates the user's account.
+    """
     success = crud.verify_user_code(
         db, user_id=user_id, code=code, purpose="signup_verification"
     )
@@ -64,3 +103,12 @@ def verify_email_with_code(
         raise HTTPException(status_code=400, detail="Invalid or expired code")
     
     return {"message": "Email verified successfully! You can now log in."}
+
+
+@router.get("/me", response_model=auth_schemas.UserOut, summary="Get current logged-in user's info")
+async def read_users_me(current_user: database.User = Depends(get_current_user)):
+    """
+    A protected endpoint that returns the information of the currently authenticated user.
+    Requires a valid JWT token in the Authorization header.
+    """
+    return current_user

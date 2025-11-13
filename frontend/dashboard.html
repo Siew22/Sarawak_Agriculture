@@ -4,97 +4,18 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard - Sarawak Agri-Advisor</title>
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="./style.css">
 </head>
 <body class="dark-theme">
-    <div class="dashboard-container">
-        <header>
-            <div class="logo">Sarawak <span>Agri-Advisor</span></div>
-            <nav>
-                <!-- Common Navigation -->
-                <a href="#" class="nav-link" data-view="ai-diagnosis">AI Diagnosis</a>
-                <a href="#" class="nav-link" data-view="posts">Posts</a>
-                <a href="#" class="nav-link" data-view="chat">Chat</a>
-                <a href="#" class="nav-link" data-view="shopping">Shopping</a>
-                <!-- Business-only Button -->
-                <button id="businessProfileBtn" class="nav-button hidden" data-view="business-profile">Business Profile</button>
-            </nav>
-            <div>
-                <span id="welcomeUser"></span>
-                <button id="logoutButton" class="nav-button">Logout</button>
-            </div>
-        </header>
-
-        <main id="mainContent">
-            <!-- Views will be dynamically inserted here -->
-            
-            <!-- AI Diagnosis View (Based on your reference image) -->
-            <div id="ai-diagnosis-view" class="view-content hidden">
-                <div class="card">
-                    <h3>Methylation Risk Score (Example)</h3>
-                    <p>This is where the AI Diagnosis data visualization will appear, similar to your reference image.</p>
-                </div>
-                <div class="card">
-                    <h3>Why The Risk? (Example)</h3>
-                </div>
-                 <div class="card">
-                    <h3>Your Digital Twin Overview (Example)</h3>
-                </div>
-            </div>
-
-            <!-- Posts View -->
-            <div id="posts-view" class="view-content hidden">
-                 <div class="card full-width">
-                    <h3>Community Posts</h3>
-                    <p>Social media feed content will go here.</p>
-                </div>
-            </div>
-
-            <!-- Chat View -->
-            <div id="chat-view" class="view-content hidden">
-                <div class="card full-width">
-                    <h3>Chat</h3>
-                    <p>Private messaging interface will go here.</p>
-                </div>
-            </div>
-
-            <!-- Shopping View -->
-            <div id="shopping-view" class="view-content hidden">
-                <div class="card full-width">
-                    <h3>Shopping Marketplace</h3>
-                    <p>Product listings for public users will go here.</p>
-                </div>
-            </div>
-
-            <!-- Business Profile View (Based on your sketch) -->
-            <div id="business-profile-view" class="view-content hidden">
-                <div class="card">
-                    <h3>Income</h3>
-                    <p>Data visualization for income.</p>
-                </div>
-                <div class="card">
-                    <h3>Product Sell Quantity</h3>
-                    <p>Data visualization for sales.</p>
-                </div>
-                <div class="card">
-                    <h3>Add Product to Sell</h3>
-                    <form id="addProductForm">
-                        <input type="text" placeholder="Name" required>
-                        <input type="text" placeholder="Description">
-                        <input type="text" placeholder="Location">
-                        <input type="number" placeholder="Price" step="0.01" required>
-                        <label class="file-label">Product Picture: <input type="file"></label>
-                        <button class="glow-button">Add Product</button>
-                    </form>
-                </div>
-                <div class="card full-width">
-                    <h3>Business User Profile</h3>
-                    <p>Detailed profile information.</p>
-                </div>
-            </div>
-
-        </main>
+    
+    <!-- 主容器，所有内容将由 dashboard.js 动态生成并插入到这里 -->
+    <div id="app-container">
+        <!-- Loading indicator for initial page load -->
+        <div style="display: flex; justify-content: center; align-items: center; height: 100vh;">
+            <div class="spinner"></div>
+        </div>
     </div>
-    <script src="dashboard.js"></script>
+
+    <script src="./dashboard.js"></script>
 </body>
 </html>

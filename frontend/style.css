@@ -10,12 +10,16 @@
 
 body {
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    background-color: var(--bg-color);
-    color: var(--text-color);
+    background: #1a152e; /* 一个比表面更深的紫色背景 */
+    color: white; /* 纯白色文字，确保清晰 */
+    padding: 10px; /* 增加一点内边距，让选项不那么拥挤 */
     margin: 0;
-    overflow: hidden;
     position: relative;
     min-height: 100vh;
+    background-image: url('./assets/background.jpg');
+    background-size: cover;
+    background-position: center;
+    background-attachment: fixed;
 }
 
 /* --- 神经网络动态背景 --- */
@@ -154,7 +158,7 @@ input::placeholder {
 }
 
 .hidden {
-    display: none;
+    display: none !important;
 }
 .error-message {
     color: #ff4d4d;
@@ -163,75 +167,18 @@ input::placeholder {
     height: 1em; /* Reserve space to prevent layout shift */
 }
 
-/* --- Business Form 美化 (最终版) --- */
-.option-group {
-    text-align: center;
-    margin-bottom: 25px;
-}
-
-.option-group-title {
-    color: var(--text-secondary);
-    margin-bottom: 15px;
-    font-size: 0.9em;
-}
-
-.options {
-    display: flex;
-    justify-content: center;
-    gap: 20px;
-}
-
-.options input[type="radio"] {
-    display: none;
-}
-
-.options label {
-    color: var(--text-secondary);
-    cursor: pointer;
-    padding: 5px 10px;
-    border-radius: 5px;
-    transition: color 0.2s, background-color 0.2s;
-}
-
-.options input[type="radio"]:checked + label {
-    color: white;
-    font-weight: bold;
-}
-
-.options label:hover {
-    background-color: rgba(255, 255, 255, 0.1);
-}
-
-.file-input-wrapper {
-    margin-bottom: 15px;
-}
-.file-input {
-    display: none;
-}
-.file-input-label {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    width: 100%;
-    padding: 12px 15px;
-    background: rgba(0, 0, 0, 0.3);
-    border: 1px solid var(--border-color);
-    border-radius: 8px;
-    color: var(--text-secondary);
-    box-sizing: border-box;
-    cursor: pointer;
-    transition: border-color 0.2s;
-}
-.file-input-label:hover {
-    border-color: var(--primary-glow);
-}
-.file-input-button {
-    padding: 6px 12px;
-    background-color: rgba(255, 255, 255, 0.1);
-    border-radius: 5px;
-    color: var(--text-color);
-    white-space: nowrap;
-}
+.option-group { text-align: center; margin-bottom: 25px; }
+.option-group-title { color: var(--text-secondary); margin-bottom: 15px; font-size: 0.9em; }
+.options { display: flex; justify-content: center; gap: 20px; }
+.options input[type="radio"] { display: none; }
+.options label { color: var(--text-secondary); cursor: pointer; padding: 5px 10px; border-radius: 5px; transition: color 0.2s, background-color 0.2s; }
+.options input[type="radio"]:checked + label { color: white; font-weight: bold; }
+.options label:hover { background-color: rgba(255, 255, 255, 0.1); }
+.file-input-wrapper { margin-bottom: 15px; }
+.file-input { display: none; }
+.file-input-label { display: flex; justify-content: space-between; align-items: center; width: 100%; padding: 12px 15px; background: rgba(0, 0, 0, 0.3); border: 1px solid var(--border-color); border-radius: 8px; color: var(--text-secondary); box-sizing: border-box; cursor: pointer; transition: border-color 0.2s; }
+.file-input-label:hover { border-color: var(--primary-glow); }
+.file-input-button { padding: 6px 12px; background-color: rgba(255, 255, 255, 0.1); border-radius: 5px; color: var(--text-color); white-space: nowrap; }
 
 /* --- 仪表盘 (Dashboard) 页面样式 --- */
 .dashboard-container {
@@ -252,6 +199,9 @@ header {
     border-radius: 12px;
     -webkit-backdrop-filter: blur(10px);
     backdrop-filter: blur(10px);
+    position: sticky; /* Make header sticky */
+    top: 20px;
+    z-index: 10;
 }
 .logo { font-size: 1.5em; font-weight: bold; }
 .logo span { background: linear-gradient(90deg, var(--primary-glow), var(--secondary-glow)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
@@ -268,6 +218,10 @@ nav a, .nav-button {
     font-size: 1em;
     font-family: inherit;
 }
+nav a.active-link {
+    color: white;
+    text-shadow: 0 0 5px var(--primary-glow);
+}
 nav a:hover, .nav-button:hover { color: white; }
 
 #logoutButton {
@@ -283,7 +237,7 @@ main {
 
 .view-content {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
     gap: 20px;
 }
 
@@ -291,18 +245,56 @@ main {
     background: var(--surface-color);
     border: 1px solid var(--border-color);
     border-radius: 12px;
-    padding: 20px;
+    padding: 25px;
     -webkit-backdrop-filter: blur(10px);
     backdrop-filter: blur(10px);
 }
 
-.card h3 {
+.card h3, .card h4 {
     margin-top: 0;
     border-bottom: 1px solid var(--border-color);
     padding-bottom: 10px;
     margin-bottom: 15px;
+    color: white;
 }
 
 .full-width {
     grid-column: 1 / -1;
 }
+
+/* --- AI诊断模块的新样式 --- */
+.diagnosis-uploader {
+    text-align: center;
+    padding: 40px;
+    border: 2px dashed var(--border-color);
+    border-radius: 12px;
+    cursor: pointer;
+    transition: background-color 0.2s, border-color 0.2s;
+}
+.diagnosis-uploader:hover {
+    background-color: var(--surface-color);
+    border-color: var(--primary-glow);
+}
+#imageUpload { display: none; }
+#imagePreview { max-width: 100%; max-height: 200px; margin-top: 20px; border-radius: 8px; }
+
+#loadingIndicator {
+    text-align: center;
+    margin-top: 20px;
+}
+.spinner {
+    border: 4px solid rgba(255,255,255,0.2);
+    border-top: 4px solid var(--primary-glow);
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    animation: spin 1s linear infinite;
+    margin: 0 auto 10px;
+}
+@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+/* --- 诊断报告样式 --- */
+#reportContainer { margin-top: 20px; }
+.report-section { margin-bottom: 25px; }
+#reportSuggestion { white-space: pre-wrap; background: rgba(0,0,0,0.2); padding: 15px; border-radius: 8px; line-height: 1.7; }
+#xaiImage { width: 100%; border-radius: 8px; margin-top: 10px; }

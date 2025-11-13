@@ -1,22 +1,27 @@
+# ====================================================================
+#  app/crud.py (Final & Complete Version)
+# ====================================================================
 import random
 import string
 from datetime import datetime, timedelta
 from sqlalchemy.orm import Session
 from app import database
 from app.auth import schemas as auth_schemas
+from app.schemas import diagnosis as schemas_diagnosis
 from app.auth import security
+from typing import Optional
 
 # ====================================================================
 #  User Related CRUD Operations
 # ====================================================================
 
-def get_user_by_email(db: Session, email: str):
+def get_user_by_email(db: Session, email: str) -> Optional[database.User]:
     """
     Retrieves a user from the database by their email.
     """
     return db.query(database.User).filter(database.User.email == email).first()
 
-def get_profile_by_ic_no(db: Session, ic_no: str):
+def get_profile_by_ic_no(db: Session, ic_no: str) -> Optional[database.Profile]:
     """
     Retrieves a profile from the database by its IC number.
     """
@@ -24,7 +29,7 @@ def get_profile_by_ic_no(db: Session, ic_no: str):
         return None
     return db.query(database.Profile).filter(database.Profile.ic_no == ic_no).first()
 
-def create_user(db: Session, user: auth_schemas.UserCreate):
+def create_user(db: Session, user: auth_schemas.UserCreate) -> database.User:
     """
     Creates a new user and their profile in the database.
     """
@@ -103,3 +108,33 @@ def verify_user_code(db: Session, user_id: int, code: str, purpose: str) -> bool
         db.commit()
         return True
     return False
+
+# ====================================================================
+#  Diagnosis History CRUD Operations
+# ====================================================================
+
+def create_diagnosis_history(
+    db: Session,
+    user_id: int,
+    report: schemas_diagnosis.FullDiagnosisReport,
+    prediction: schemas_diagnosis.PredictionResult,
+    risk: schemas_diagnosis.RiskAssessment,
+    image_url: str
+) -> database.DiagnosisHistory:
+    """
+    Creates and saves a new diagnosis history record.
+    """
+    db_history_entry = database.DiagnosisHistory(
+        user_id=user_id,
+        image_url=image_url,
+        disease_name=prediction.disease,
+        confidence=prediction.confidence,
+        risk_level=risk.risk_level,
+        report_title=report.title,
+        report_summary=report.diagnosis_summary,
+        # timestamp is set automatically by the database model's default
+    )
+    db.add(db_history_entry)
+    db.commit()
+    db.refresh(db_history_entry)
+    return db_history_entry
