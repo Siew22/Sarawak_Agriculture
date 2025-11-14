@@ -24,7 +24,7 @@ BATCH_SIZE = 16 # 6GB VRAM 的安全批量大小
 NUM_WORKERS = 2 # 6GB VRAM 的安全CPU工作线程数
 NUM_EPOCHS = 80 # 保持足够的训练轮次
 LEARNING_RATE = 0.001
-MODEL_ARCHITECTURE = 'efficientnet_b0' # 明确使用轻量级模型
+MODEL_ARCHITECTURE = 'efficientnet_b2' # 明确使用轻量级模型
 
 
 # --- CustomDatasetWrapper 保持不变，确保多进程安全 ---
