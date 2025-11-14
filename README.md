@@ -1,144 +1,189 @@
-# 🌿 Sarawak Agri-Advisor
+# 🌿 Sarawak Agri-Advisor: An End-to-End AI Plant Doctor
 
 ![Python](https://img.shields.io/badge/Python-3.10-3776AB?style=for-the-badge&logo=python&logoColor=white)
 ![FastAPI](https://img.shields.io/badge/FastAPI-009688?style=for-the-badge&logo=fastapi&logoColor=white)
 ![PyTorch](https://img.shields.io/badge/PyTorch-EE4C2C?style=for-the-badge&logo=pytorch&logoColor=white)
-![Git LFS](https://img.shields.io/badge/Git%20LFS-1.3GB-blue?style=for-the-badge&logo=git&logoColor=white)
+![MySQL](https://img.shields.io/badge/MySQL-4479A1?style=for-the-badge&logo=mysql&logoColor=white)
+![Docker](https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white)
 
-**An AI-powered, 100% self-developed plant disease diagnosis system for farmers in Sarawak, with an initial focus on Black Pepper cultivation.**
+An AI-powered, 100% self-developed plant disease diagnosis system designed for farmers in Sarawak, with a specialized focus on Black Pepper cultivation. This is a complete end-to-end web application that provides instant, AI-driven diagnosis, environmental risk assessment, and actionable management advice in multiple languages.
 
-This project is a complete end-to-end web application designed to provide instant, AI-driven diagnosis of crop diseases. It leverages a custom deep learning model trained from scratch, soft computing techniques for risk analysis, and a dynamic knowledge base to deliver accurate, localized, and easy-to-understand advice in multiple languages.
+The entire system, from data collection and model training to a multi-user backend API and deployment, is built from the ground up, demonstrating a full-stack AI development lifecycle.
 
 ---
 
 ## ✨ Core Features
 
--   **📸 AI Disease Diagnosis:** Upload a photo of a plant leaf and get an instant diagnosis. The model is **100% self-developed** using PyTorch and trained from scratch on a curated dataset, with **no pre-trained models** used.
--   **🌦️ Automated Risk Analysis:** Automatically fetches local weather data (temperature & humidity) via GPS and uses a Fuzzy Inference System to provide a contextual disease risk score.
--   **📖 Dynamic Knowledge Base:** All diagnostic reports and management suggestions are dynamically generated in real-time from a structured YAML knowledge base, ensuring easy updates and scalability.
--   **🌐 Multi-language Support:** The user interface and final reports are fully internationalized, supporting **English, Bahasa Malaysia, and Chinese**.
--   **🚀 Lightweight & Accessible:** A simple web frontend ensures the tool is accessible on any device with a browser, with no installation required for the end-user.
+-   **📸 100% Self-Developed AI Model:** Upload a leaf photo for instant diagnosis. The core is a custom `EfficientNet` model, **trained from scratch** on a curated dataset of local pepper diseases.
+-   **👥 Multi-User System with 2FA:** Secure registration and login for `Public` and `Business` users, featuring email verification (2FA) for account activation.
+-   **🌦️ Fuzzy Logic Risk Assessment:** Automatically fetches local weather (via GPS) and uses a `Scikit-fuzzy` based inference system to calculate a real-time environmental risk score.
+-   **🌐 Dynamic & Multilingual Reporting:** Generates comprehensive diagnostic reports in **English, Bahasa Malaysia, and Chinese**, sourced from a structured YAML knowledge base.
+-   **🧠 AI-Enhanced Web Search:** For unrecognized diseases, the system uses a custom-trained **Siamese Network (LSTM-based)** to perform semantic web searches and find relevant information.
+-   **🔍 XAI Model Explainability:** Provides **Grad-CAM** heatmaps to visualize which parts of the image the AI model focused on, making the diagnosis transparent.
+-   **🌱 Self-Learning Architecture:** The system can automatically add new discoveries to the dataset and knowledge base, triggering a background retraining process via **Celery & Redis**.
+-   **🐳 Dockerized Deployment:** The entire application stack (FastAPI, Celery Worker, Redis, MySQL) is containerized using **Docker Compose** for easy, reproducible deployment.
 
 ---
 
 ## 🛠️ Technology Stack
 
--   **Backend:** FastAPI, PyTorch, Scikit-fuzzy, Uvicorn
+-   **Backend:** FastAPI, Uvicorn
+-   **Database:** MySQL with SQLAlchemy (ORM)
+-   **AI & Machine Learning:** PyTorch, Scikit-fuzzy, Grad-CAM, Sentence-Transformers, Passlib (for password hashing)
+-   **Async Task Queue:** Celery, Redis
+-   **Deployment:** Docker, Docker Compose
 -   **Frontend:** Vanilla HTML5, CSS3, JavaScript (Fetch API, Geolocation API)
--   **Data Science:** Pandas, Scikit-learn, Pillow
--   **Version Control:** Git & **Git LFS** (for handling large dataset files)
+-   **Email Service (Dev):** Python's built-in `smtpd` for local debugging.
 
 ---
 
-## 🚀 Getting Started
+## 🚀 Getting Started Instructions
 
-Follow these instructions to get the project and its complete dataset running on your local machine.
+Follow these instructions to get the full project running on your local machine for development and testing.
 
-### 📋 Prerequisites
+### Prerequisites
 
-1.  **Git & Git LFS:** You must have both installed.
-    -   [Download Git](https://git-scm.com/downloads)
-    -   [Download Git LFS](https://git-lfs.github.com/)
-2.  **Python:** Version 3.10 is recommended. [Download Python](https://www.python.org/downloads/)
-3.  **(Optional for Training)** An NVIDIA GPU with updated CUDA drivers.
+1.  **Git & Git LFS:** [Download Git](https://git-scm.com/downloads), [Install Git LFS](https://git-lfs.github.com/).
+2.  **Python 3.10:** [Download Python](https://www.python.org/downloads/).
+3.  **MySQL Server & Workbench:** [Download MySQL Community Server](https://dev.mysql.com/downloads/mysql/) and [MySQL Workbench](https://dev.mysql.com/downloads/workbench/). During installation, remember your `root` user password.
+4.  **(Optional for AI Training)** An NVIDIA GPU with CUDA drivers.
 
-### ⚙️ Installation & Setup (Windows PowerShell)
+### Step-by-Step Setup
 
-*Run these commands in **Windows PowerShell as an Administrator**.*
+**1. Clone the Repository**
+   - First, ensure Git LFS is installed on your system. Open your terminal (Git Bash, PowerShell, etc.) and run:
+     ```bash
+     git lfs install
+     ```
+   - Clone the project. This will automatically download the large dataset and model files tracked by LFS.
+     ```bash
+     git clone https://github.com/Siew22/Sarawak_Agriculture.git
+     cd Sarawak_Agriculture
+     ```
 
-**Step 1: Install Essential Tools via Chocolatey**
-*   (If not already installed) Install the package manager:
-    ```powershell
-    Set-ExecutionPolicy Bypass -Scope Process -Force; iex ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
-    ```
-*   **Close and reopen PowerShell as Administrator.**
-*   Install Git, Git LFS, and Python:
-    ```powershell
-    choco install git git-lfs python --version=3.10 -y
-    ```
-*   **Close and reopen PowerShell as Administrator** again.
+**2. Set Up the Database**
+   - Start your MySQL Server.
+   - Open **MySQL Workbench** and connect to your local server.
+   - Create a new database (schema) for the project. Run this SQL command:
+     ```sql
+     CREATE DATABASE sarawak_agri_prod;
+     ```
 
-**Step 2: Enable Git LFS (One-Time Setup)**
-```powershell
-git lfs install
+**3. Configure Environment Variables**
+   - In the project's root directory, find the `.env.example` file (if it exists) and rename it to `.env`. If it doesn't exist, create a new file named `.env`.
+   - Open the `.env` file and fill in your details:
+     ```ini
+     # --- Database Configuration ---
+     DB_HOST=127.0.0.1
+     DB_PORT=3306
+     DB_USER=root
+     DB_PASSWORD="YOUR_MYSQL_ROOT_PASSWORD"  # <-- IMPORTANT: Replace with your actual password
+     DB_NAME="sarawak_agri_prod"
 
-**Step 3: Clone the Main Project Repository**
-This command will clone the project's source code.
-code
-Powershell
-cd ~\Documents
-git clone https://github.com/Siew22/Sarawak-Agriculture.git
-cd Sarawak-Agriculture
+     # --- Other Settings (Keep as is for now) ---
+     PROJECT_NAME="Sarawak Agri-Advisor"
+     CONFIDENCE_THRESHOLD=0.75
+     SERPAPI_KEY="" 
+     ALLOWED_ORIGINS="http://localhost,http://localhost:8080,http://127.0.0.1:5500,null"
+     ```
 
-Step 4: Download the Required Datasets
-The project relies on external datasets. We will clone the PlantVillage-Dataset now. The other datasets (Mydataset) are already included in this repository via Git LFS.
-code
-Powershell
-# This command downloads the large PlantVillage dataset
-git clone https://github.com/spMohanty/PlantVillage-Dataset.git
-Note: This is a very large repository and may take a significant amount of time to download.
+**4. Set Up Python Virtual Environment**
+   - From the project root directory in your terminal:
+     ```bash
+     # Create a virtual environment
+     python -m venv env
 
-Step 5: Set Up Python Environment
-code
-Powershell
-# Allow script execution for this session
-Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope Process
+     # Activate it
+     # On Windows (PowerShell):
+     .\env\Scripts\Activate.ps1
+     # On macOS/Linux:
+     # source env/bin/activate
+     
+     # Install all required packages
+     pip install -r requirements.txt
+     ```
 
-# Create and activate virtual environment
-python -m venv venv
-.\venv\Scripts\Activate.ps1
-(You should now see (venv) at the beginning of your prompt.)
-
-Step 6: Install Python Dependencies
-code
-Powershell
-pip install -r requirements.txt
-✅ Setup Complete! Your environment, including all code and required datasets, is now fully configured.
-
----
-
-## 🔬 Training the Model
-
-The repository includes all the necessary data to train the model from scratch.
-
--   Run the appropriate training script from the **project root directory**:
-    ```powershell
-    # For 12GB+ VRAM (Recommended)
-    python train/train_model_2.py
-
-    # For 6GB VRAM
-    python train/train_model.py
-    ```
--   After training, update the `MODEL_PATH` in `app/models/disease_classifier.py` to point to your new model file.
+**5. You are ready to run the application!**
 
 ---
 
-## ▶️ Running the Application
+## ▶️ Running the Application (Development Mode)
 
-### 1. Run the Backend Server
+The application requires **two separate terminal windows** to run in development mode.
 
--   From the **project root directory** with your virtual environment active:
-    ```powershell
-    uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
-    ```
--   The backend is now live at `http://127.0.0.1:8000`.
+**Terminal 1: Start the Local Email Debug Server**
+   - Open a new terminal, navigate to the project directory, and activate the virtual environment.
+   - Run the following command. This terminal will "listen" for emails and print them. **Do not close it.**
+     ```bash
+     python -m smtpd -c DebuggingServer -n localhost:8025
+     ```
 
-### 2. Run the Frontend
+**Terminal 2: Start the FastAPI Backend Server**
+   - Open another new terminal, navigate to the project directory, and activate the virtual environment.
+   - Run the Uvicorn server. It will automatically connect to the database and email server.
+     ```bash
+     uvicorn app.main:app --reload
+     ```
+   - The backend is now live at `http://127.0.0.1:8000`. The first time you run this, it will automatically create all necessary tables in your `sarawak_agri_prod` database.
 
--   Navigate to the `frontend/` directory in your file explorer.
--   **Simply double-click the `index.html`** file to open it in your browser.
+**Access the Frontend**
+   - Navigate to the `frontend/` directory in your file explorer.
+   - Double-click the `login.html` file to open it in your browser.
+   - You can now test the full registration -> email verification -> login -> dashboard -> AI diagnosis workflow.
 
 ---
 
-## 🛠️ Project Structure
+## 🐳 Running with Docker (Production/Easy Mode)
 
--   `app/`: Main backend application source code.
--   `frontend/`: All frontend files (HTML, CSS, JS).
--   `knowledge_base/`: YAML files containing the multi-language knowledge.
--   `models_store/`: Stores the trained model (`.pth`) and label files.
--   `train/`: Scripts for training the AI model.
--   `Mydataset/` & `PlantVillage-Dataset/`: Raw and curated datasets, tracked by **Git LFS**.
--   `.gitattributes`: Configures which files are tracked by Git LFS.
--   `.gitignore`: Specifies files for Git to ignore (e.g., `venv`).
--   `README.md`: This file.
--   `requirements.txt`: Python dependencies.
+Once Docker Desktop is installed, you can run the entire stack with a single command.
+
+1.  Make sure your `.env` file is correctly configured as described in the setup steps.
+2.  From the project root directory, run:
+    ```bash
+    docker-compose up --build
+    ```
+    This will start the FastAPI backend, Redis, and a Celery worker. *Note: The provided `docker-compose.yml` does not include MySQL; it assumes a separate database instance.*
+
+---
+
+## 🔬 Training Your Own Models (Optional)
+
+If you wish to retrain the models:
+
+1.  **Image Classifier:**
+    - Place your datasets in the appropriate folders.
+    - Run the training script:
+      ```bash
+      python app/train/train_model_2.py
+      ```
+2.  **NLG Sentence Encoder:**
+    - Update the training data in `knowledge_base/nlg_training_data.json`.
+    - Run the training script:
+      ```bash
+      python app/train/train_nlg_model.py
+      ```
+
+---
+
+## 📂 Project Structure
+
+```
+.
+├── app/                  # Main FastAPI backend application
+│   ├── auth/             # Authentication logic and schemas
+│   ├── models/           # AI models (classifier, fuzzy logic, etc.)
+│   ├── routers/          # API endpoints (users, token)
+│   ├── services/         # Business logic (email, weather, etc.)
+│   ├── train/            # Scripts for training models
+│   ├── utils/            # Utility functions (image processing, XAI)
+│   ├── database.py       # SQLAlchemy setup and ORM models
+│   └── main.py           # FastAPI entrypoint
+├── frontend/             # All frontend files (HTML, CSS, JS)
+├── knowledge_base/       # YAML files for multilingual disease info
+├── models_store/         # Stores trained model weights (.pth)
+├── static/               # For serving static files like uploaded images
+├── .env                  # Environment variables (!!! DO NOT COMMIT !!!)
+├── docker-compose.yml    # Docker configuration
+├── Dockerfile            # Instructions to build the backend image
+└── requirements.txt      # Python dependencies
+```
