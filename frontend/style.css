@@ -10,16 +10,12 @@
 
 body {
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    background: #1a152e; /* 一个比表面更深的紫色背景 */
-    color: white; /* 纯白色文字，确保清晰 */
-    padding: 10px; /* 增加一点内边距，让选项不那么拥挤 */
-    margin: 0;
+    background-color: var(--bg-color); /* 使用主题变量中的背景颜色 */
+    color: var(--text-color); /* 使用主题变量中的文字颜色 */
+    margin: 0; /* 移除所有外边距 */
     position: relative;
     min-height: 100vh;
-    background-image: url('./assets/background.jpg');
-    background-size: cover;
-    background-position: center;
-    background-attachment: fixed;
+    overflow-x: hidden; /* 只禁止水平滚动，允许垂直滚动 */
 }
 
 /* --- 神经网络动态背景 --- */

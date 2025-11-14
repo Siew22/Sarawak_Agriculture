@@ -1,10 +1,12 @@
 # ====================================================================
 #  app/main.py (Final & Complete Version)
 # ====================================================================
+
+# --- Part 1: Pre-emptive Configuration (MUST RUN FIRST!) ---
 import os
 from pathlib import Path
 
-# --- 关键修复：在所有其他导入之前，安全地配置matplotlib ---
+# 关键修复：在所有其他导入之前，安全地配置matplotlib
 # 这会告诉 matplotlib 使用项目内部的一个临时文件夹来存放它的缓存，
 # 从而彻底避免在用户主目录下的权限问题。
 temp_mpl_dir = Path(__file__).resolve().parent.parent / "temp" / "mpl_config"
@@ -12,10 +14,7 @@ os.makedirs(temp_mpl_dir, exist_ok=True)
 os.environ['MPLCONFIGDIR'] = str(temp_mpl_dir)
 
 
-# ====================================================================
-#  Part 2: Standard Imports
-#  现在可以安全地导入其他所有模块了
-# ====================================================================
+# --- Part 2: Standard Imports ---
 import uuid
 import shutil
 from typing import Dict, Any, Optional
@@ -34,40 +33,30 @@ from sqlalchemy.orm import Session
 from app import database
 database.Base.metadata.create_all(bind=database.engine)
 
-# --- 应用模块导入 ---
+# --- 应用模块导入 (已修正为最可靠的导入方式) ---
 from app.config import settings
 from app.schemas import diagnosis as schemas_diagnosis
 from app.schemas import prediction as schemas_prediction
 from app.utils import image_processing, xai_generator
 from app.models import disease_classifier, risk_assessor, recommendation_generator
-
-# --- 关键修复：从具体的文件导入，而不是从文件夹导入 ---
 from app.services.weather_service import weather_service
 from app.services.disease_predictor_service import disease_predictor_service
 from app.services.knowledge_discovery_service import knowledge_discovery_service
 from app.services.data_management_service import data_management_service
 from app.services.knowledge_base_service import kb_service
-
 from app.background_tasks import trigger_background_retraining
-from app.routers import users, token
+from app.routers import users, token  # 导入路由模块
 from app import crud
 from app.auth import security
 
-# --- 配置 Matplotlib (解决服务器渲染问题) ---
-temp_mpl_dir = Path(__file__).resolve().parent.parent / "temp" / "mpl_config"
-os.makedirs(temp_mpl_dir, exist_ok=True)
-os.environ['MPLCONFIGDIR'] = str(temp_mpl_dir)
-
-# ====================================================================
-#  Part 3: FastAPI Application Setup
-# ====================================================================
+# --- Part 3: FastAPI Application Setup ---
 app = FastAPI(
     title=settings.PROJECT_NAME,
     description="An AI-powered agricultural diagnosis system with XAI and disease prediction.",
     version="3.1.0",
 )
 
-# --- 中间件与路由 ---
+# --- 中间件与路由注册 ---
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.ALLOWED_ORIGINS_LIST,
@@ -77,14 +66,16 @@ app.add_middleware(
 )
 
 static_path = Path(__file__).resolve().parent.parent / "static"
-os.makedirs(static_path / "uploads", exist_ok=True)
-os.makedirs(static_path / "xai_images", exist_ok=True)
+(static_path / "uploads").mkdir(parents=True, exist_ok=True)
+(static_path / "xai_images").mkdir(parents=True, exist_ok=True)
 app.mount("/static", StaticFiles(directory=static_path), name="static")
 
+# 关键修复：确保路由被正确注册
 app.include_router(users.router)
 app.include_router(token.router)
 
-# --- API 生命周期 ---
+
+# --- Part 4: API 生命周期 ---
 @app.on_event("startup")
 async def startup_event():
     logger.info(f"Starting up {settings.PROJECT_NAME} API v3.1...")
@@ -99,7 +90,8 @@ async def startup_event():
 async def shutdown_event():
     logger.info(f"Shutting down {settings.PROJECT_NAME} API...")
 
-# --- 依赖注入 ---
+
+# --- Part 5: 依赖注入 ---
 async def get_weather_data(latitude: float = Form(...), longitude: float = Form(...)) -> Dict[str, Any]:
     try:
         weather_data = await weather_service.get_current_weather(latitude, longitude)
@@ -125,7 +117,8 @@ async def get_current_user(token: str = Header(..., alias="Authorization"), db: 
         raise credentials_exception
     return user
 
-# --- API 端点 ---
+
+# --- Part 6: API 端点 ---
 @app.get("/", summary="API Health Check", tags=["General"])
 def read_root():
     return {"status": "ok", "message": f"Welcome to {settings.PROJECT_NAME} API!"}
@@ -149,7 +142,6 @@ async def create_diagnosis_report(
         unique_filename = f"{uuid.uuid4().hex}{file_extension}"
         file_path = static_path / "uploads" / unique_filename
         
-        # 使用 aiofiles 进行异步文件写入会更高效，但为了简单，先用同步方式
         with open(file_path, "wb") as buffer:
             shutil.copyfileobj(image.file, buffer)
         
@@ -192,7 +184,6 @@ async def create_diagnosis_report(
             logger.success(f"Diagnosis history saved for user ID: {current_user.id}")
         except Exception as e:
             logger.error(f"Failed to save diagnosis history to DB: {e}")
-            # Do not fail the request if history saving fails, just log it.
         
         return report
 
@@ -226,7 +217,7 @@ async def predict_disease_risk(
             raise HTTPException(status_code=503, detail="Unable to retrieve valid weather forecast data.")
 
         daily_risks = disease_predictor_service.predict_daily_risk(forecast_data, disease_key)
-        disease_name = "Unknown Disease" # Fallback
+        disease_name = "Unknown Disease"
         
         kb_info = kb_service.get_disease_info(disease_key)
         if kb_info and kb_info.get("name"):

@@ -1,10 +1,17 @@
 # train/train_model.py (为你定制的、6GB最终纯净版)
+import os
+from pathlib import Path
+# --- 关键修复：在所有其他导入之前，为PyTorch指定一个安全的缓存目录 ---
+# 这会告诉PyTorch/Torchvision将所有下载的模型权重都存放在项目内部，
+# 从而彻底避免在用户主目录下的权限问题。
+torch_cache_dir = Path(__file__).resolve().parent.parent.parent / "temp" / "torch_cache"
+os.makedirs(torch_cache_dir, exist_ok=True)
+os.environ['TORCH_HOME'] = str(torch_cache_dir)
 import torch
 import torch.nn as nn
 import torch.optim as optim
 from torchvision import datasets, models, transforms
 from torch.utils.data import DataLoader, Dataset, ConcatDataset, random_split
-import os
 import json
 from tqdm import tqdm
 import time
@@ -128,7 +135,12 @@ def train():
 
     # 5. 模型定义 (100% 自研, 使用 B0)
     print(f"正在构建一个全新的 '{MODEL_ARCHITECTURE}' 模型 (100% 完全自研)...")
-    model = models.efficientnet_b0(weights=None, num_classes=NUM_CLASSES)
+    model = models.efficientnet_b2(weights='IMAGENET1K_V1') #num_classes=NUM_CLASSES)
+    # 2. 替换掉最后一层（分类器），以匹配我们自己的类别数量
+    #    这样可以保留所有预训练好的特征提取能力
+    num_ftrs = model.classifier[1].in_features
+    model.classifier[1] = nn.Linear(num_ftrs, NUM_CLASSES)
+
     model = model.to(device)
 
     # 6. 优化器与训练循环

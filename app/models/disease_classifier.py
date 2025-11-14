@@ -31,7 +31,7 @@ class DiseaseClassifier:
             # 2. 根据指定的架构，构建一个“空白”的模型结构
             print(f"正在构建一个全新的 '{architecture}' 模型结构...")
             if architecture == 'b0':
-                self.model = efficientnet_b0(weights=None, num_classes=self.num_classes)
+                self.model = efficientnet_b0(weights='IMAGENET1K_V1', num_classes=self.num_classes)
             elif architecture == 'b2':
                 self.model = efficientnet_b2(weights=None, num_classes=self.num_classes)
             elif architecture == 'convnext_tiny':
