@@ -69,13 +69,18 @@ function renderDashboard() {
     dashboardContainer.className = 'dashboard-container';
     
     const header = document.createElement('header');
-    const { permissions, user_type, email } = currentUser;
+    const { permissions, user_type, email, subscription_tier } = currentUser;
     
+    // --- 关键修复：修正 Posts 链接的禁用逻辑 ---
+    // 只有 Free Tier 用户才可能无法访问 Posts
+    // RM10 和 RM15/20 用户都应该可以访问
+    const isPostsDisabled = (subscription_tier === 'free');
+
     let navLinks = `
         <a href="#" class="nav-link" data-view="profile">Profile</a>
         <a href="#" class="nav-link active-link" data-view="ai-diagnosis">AI Diagnosis</a>
         <a href="#" class="nav-link" data-view="diagnosis-history">History</a>
-        <a href="#" class="nav-link" data-view="posts">Posts</a>
+        <a href="#" class="nav-link ${isPostsDisabled ? 'disabled-link' : ''}" data-view="posts">Posts</a>
         <a href="#" class="nav-link ${!permissions.can_chat ? 'disabled-link' : ''}" data-view="chat">Chat</a>
         <a href="#" class="nav-link ${!permissions.can_shop ? 'disabled-link' : ''}" data-view="shopping">Shopping</a>
     `;
@@ -92,7 +97,8 @@ function renderDashboard() {
         </div>
     `;
     dashboardContainer.appendChild(header);
-
+    
+    // ... (main content rendering remains the same)
     const main = document.createElement('main');
     main.id = 'mainContent';
     dashboardContainer.appendChild(main);
@@ -102,8 +108,7 @@ function renderDashboard() {
     document.getElementById('logoutButton').addEventListener('click', logout);
 
     const urlParams = new URLSearchParams(window.location.search);
-    const view = urlParams.get('view');
-    renderView(view || 'ai-diagnosis');
+    renderView(urlParams.get('view') || 'ai-diagnosis');
 }
 
 async function renderView(viewId) {
@@ -131,6 +136,8 @@ async function renderView(viewId) {
         } else if (viewId === 'business-profile' && currentUser.user_type === 'business') {
             mainContent.innerHTML = getBusinessProfileHTML();
         } else if (viewId === 'profile') {
+            const latestUser = await apiFetch(USERS_ME_API_URL);
+            currentUser = latestUser;
             mainContent.innerHTML = getProfileHTML(currentUser);
             attachPlanButtonListeners();
         } else {
@@ -140,6 +147,86 @@ async function renderView(viewId) {
     } catch (error) {
         mainContent.innerHTML = `<div class="card full-width error-message"><p>Failed to load view: ${error.message}</p></div>`;
     }
+}
+
+// --- HTML Template Generators (UPDATED) ---
+
+function getShoppingHTML(products) {
+    let html = `<h3>Marketplace</h3>`;
+    if (!products || products.length === 0) {
+        html += `<p>No products available right now.</p>`;
+    } else {
+        const productCards = products.map(p => `
+            <div class="card product-card">
+                <img src="${API_BASE_URL}${p.image_url || '/static/placeholder.jpg'}" style="width:100%; border-radius:8px; object-fit: cover; height: 200px;">
+                <h4>${p.name}</h4>
+                <p style="color: var(--text-secondary);">${p.description || 'No description available.'}</p>
+                <p><strong>RM ${p.price.toFixed(2)}</strong></p>
+                <button class="glow-button buy-btn" data-product-id="${p.id}" data-product-name="${p.name}" data-price="${p.price}">Buy Now</button>
+            </div>
+        `).join('');
+        html = `<div class="view-content">${productCards}</div>`;
+    }
+    return `<div class="card full-width">${html}</div>`;
+}
+
+function getCheckoutHTML(product) {
+    return `
+        <div class="card full-width">
+            <h3>Checkout</h3>
+            <p>You are buying: <strong>${product.name}</strong> for <strong>RM ${product.price.toFixed(2)}</strong></p>
+            <form id="checkoutForm">
+                <input type="text" id="recipientName" placeholder="Full Name" required>
+                <input type="tel" id="recipientPhone" placeholder="Phone Number" required>
+                <textarea id="shippingAddress" placeholder="Shipping Address" required style="..."></textarea>
+                <button type="submit" class="glow-button">Confirm Purchase</button>
+            </form>
+            <p id="checkout-error" class="error-message"></p>
+        </div>
+    `;
+}
+
+// --- Event Listeners & Interaction Logic (UPDATED) ---
+
+function attachShoppingListeners() {
+    document.querySelectorAll('.buy-btn').forEach(button => {
+        button.addEventListener('click', (e) => {
+            const product = {
+                id: e.target.dataset.productId,
+                name: e.target.dataset.productName,
+                price: parseFloat(e.target.dataset.price)
+            };
+            // 切换到结账视图
+            const mainContent = document.getElementById('mainContent');
+            mainContent.innerHTML = getCheckoutHTML(product);
+            
+            // 为结账表单绑定事件
+            document.getElementById('checkoutForm').addEventListener('submit', async (submitEvent) => {
+                submitEvent.preventDefault();
+                const errorP = document.getElementById('checkout-error');
+                errorP.textContent = '';
+
+                const orderData = {
+                    recipient_name: document.getElementById('recipientName').value,
+                    recipient_phone: document.getElementById('recipientPhone').value,
+                    shipping_address: document.getElementById('shippingAddress').value,
+                    items: [{ product_id: parseInt(product.id), quantity: 1 }]
+                };
+
+                try {
+                    await apiFetch(`${API_BASE_URL}/orders/`, {
+                        method: 'POST',
+                        body: JSON.stringify(orderData)
+                    });
+                    
+                    // 显示模拟的物流页面
+                    mainContent.innerHTML = `<div class="card full-width"><h3>Thank You!</h3><p>Your order for ${product.name} has been placed.</p><p>Status: Sorting -> Delivering...</p><p>You can track your order in your Profile -> Purchases section (Coming Soon).</p></div>`;
+                } catch(error) {
+                    errorP.textContent = `Order failed: ${error.message}`;
+                }
+            });
+        });
+    });
 }
 
 // --- 5. HTML Template Generators ---

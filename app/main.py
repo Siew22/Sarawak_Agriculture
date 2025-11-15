@@ -44,7 +44,7 @@ from app.services.data_management_service import data_management_service
 from app.services.knowledge_base_service import kb_service
 from app.services import permission_service
 from app.background_tasks import trigger_background_retraining
-from app.routers import users, token, diagnoses
+from app.routers import users, token, diagnoses, products, posts, orders
 from app import crud
 from app.auth import security
 from app.dependencies import get_current_user, get_weather_data # <--- 导入新的依赖

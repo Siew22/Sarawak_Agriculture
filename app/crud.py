@@ -16,6 +16,7 @@ from app.schemas.product import ProductCreate
 from app.schemas.post import PostCreate
 from app.auth import security
 from app.schemas.profile import ProfileUpdate
+from app.schemas import order as order_schemas
 
 
 # ====================================================================
@@ -200,3 +201,53 @@ def update_user_profile(db: Session, user: database.User, profile_update: Profil
     db.commit()
     db.refresh(profile)
     return profile
+
+def create_comment(db: Session, content: str, post_id: int, user_id: int) -> database.Comment:
+    db_comment = database.Comment(content=content, post_id=post_id, owner_id=user_id)
+    db.add(db_comment)
+    db.commit()
+    db.refresh(db_comment)
+    return db_comment
+
+def get_comments_for_post(db: Session, post_id: int) -> List[database.Comment]:
+    return db.query(database.Comment).filter(database.Comment.post_id == post_id).order_by(database.Comment.created_at.asc()).all()
+
+def create_order(db: Session, order_data: order_schemas.OrderCreate, buyer_id: int) -> database.Order:
+    total_amount = 0
+    order_items_to_create = []
+
+    for item_data in order_data.items:
+        product = db.query(database.Product).filter(database.Product.id == item_data.product_id).first()
+        if not product:
+            raise HTTPException(status_code=404, detail=f"Product with id {item_data.product_id} not found.")
+        
+        price_at_purchase = product.price
+        total_amount += price_at_purchase * item_data.quantity
+        
+        order_items_to_create.append(database.OrderItem(
+            product_id=item_data.product_id,
+            quantity=item_data.quantity,
+            price_at_purchase=price_at_purchase
+        ))
+
+    db_order = database.Order(
+        buyer_id=buyer_id,
+        recipient_name=order_data.recipient_name,
+        recipient_phone=order_data.recipient_phone,
+        shipping_address=order_data.shipping_address,
+        total_amount=total_amount
+    )
+    db.add(db_order)
+    db.commit()
+    db.refresh(db_order)
+
+    for item in order_items_to_create:
+        item.order_id = db_order.id
+        db.add(item)
+    
+    db.commit()
+    db.refresh(db_order)
+    return db_order
+
+def get_orders_by_user(db: Session, user_id: int) -> List[database.Order]:
+    return db.query(database.Order).filter(database.Order.buyer_id == user_id).order_by(database.Order.created_at.desc()).all()

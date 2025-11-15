@@ -78,21 +78,50 @@ class DiagnosisHistory(Base):
 
     user = relationship("User", back_populates="diagnoses")
 
+# --- 商品模型 (已升级) ---
 class Product(Base):
     __tablename__ = "products"
-
     id = Column(Integer, primary_key=True, index=True)
     seller_id = Column(Integer, ForeignKey("users.id"))
-
-    name = Column(String(255), nullable=False)
+    name = Column(String(255), nullable=False, index=True)
     description = Column(Text)
-    location = Column(String(255))
     price = Column(Float, nullable=False)
+    location = Column(String(255))
     image_url = Column(String(512))
-    quantity_available = Column(Integer, default=0)
-    is_active = Column(Boolean, default=True)
+    is_active = Column(Boolean, default=True) # 是否上架
     
     seller = relationship("User", back_populates="products")
+
+# --- (新) 订单模型 ---
+class Order(Base):
+    __tablename__ = "orders"
+    id = Column(Integer, primary_key=True, index=True)
+    buyer_id = Column(Integer, ForeignKey("users.id"))
+    
+    # 收货信息
+    recipient_name = Column(String(255), nullable=False)
+    recipient_phone = Column(String(50), nullable=False)
+    shipping_address = Column(Text, nullable=False)
+    
+    total_amount = Column(Float, nullable=False)
+    status = Column(String(50), default="Pending", nullable=False) # e.g., Pending, Sorting, Delivering, Completed
+    
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+    
+    buyer = relationship("User")
+    items = relationship("OrderItem", back_populates="order")
+
+# --- (新) 订单商品项模型 ---
+class OrderItem(Base):
+    __tablename__ = "order_items"
+    id = Column(Integer, primary_key=True, index=True)
+    order_id = Column(Integer, ForeignKey("orders.id"))
+    product_id = Column(Integer, ForeignKey("products.id"))
+    quantity = Column(Integer, default=1)
+    price_at_purchase = Column(Float, nullable=False) # 记录购买时的价格
+    
+    order = relationship("Order", back_populates="items")
+    product = relationship("Product")
 
 class VerificationCode(Base):
     __tablename__ = "verification_codes"
