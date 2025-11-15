@@ -578,7 +578,10 @@ main {
     background-color: rgba(0, 0, 0, 0.7);
     display: flex;
     justify-content: center;
-    align-items: center;
+    align-items: flex-start; /* 关键修复1: 从顶部开始对齐，而不是中间 */
+    overflow-y: auto;        /* 关键修复2: 允许垂直方向滚动 */
+    padding-top: 5vh;        /* 增加一点顶部的间距，让它看起来不那么靠上 */
+    padding-bottom: 5vh;     /* 增加一点底部的间距 */
     z-index: 1000;
     -webkit-backdrop-filter: blur(5px);
     backdrop-filter: blur(5px);
@@ -636,4 +639,51 @@ main {
 #orderForm #quantity {
     width: 80px;
     margin-bottom: 0;
+}
+
+/* --- 二维码图片样式修复 --- */
+.qr-code {
+    max-width: 100%; /* 关键修复1: 限制图片最大宽度为容器的100% */
+    height: auto;    /* 关键修复2: 高度自动调整，防止变形 */
+    display: block;  /* 移除图片下方的微小间距 */
+    margin: 15px auto; /* 让图片上下留白，并水平居中 */
+    border-radius: 8px; /* 给二维码也加上一点圆角，更美观 */
+}
+
+/* 1. 按钮容器的样式 */
+.bank-choice {
+    display: flex;
+    background-color: rgba(0, 0, 0, 0.3); /* 更深的背景色 */
+    border-radius: 8px; /* 匹配输入框的圆角 */
+    padding: 5px; /* 内部留白 */
+    margin-bottom: 20px; /* 和下方内容拉开距离 */
+    border: 1px solid var(--border-color); /* 统一的紫色边框 */
+}
+
+/* 2. 按钮本身的样式 */
+.bank-option-btn {
+    flex-grow: 1; /* 让两个按钮平分容器宽度 */
+    padding: 10px 15px;
+    background: transparent; /* 默认状态下是透明的 */
+    border: none; /* 移除默认边框 */
+    border-radius: 6px; /* 轻微的内部圆角 */
+    color: var(--text-secondary); /* 默认文字颜色（灰色）*/
+    cursor: pointer;
+    font-size: 0.9em;
+    font-weight: 500;
+    transition: all 0.3s ease; /* 平滑过渡效果 */
+}
+
+/* 3. 鼠标悬停在按钮上时的效果 */
+.bank-option-btn:hover {
+    background-color: rgba(255, 255, 255, 0.1); /* 轻微提亮 */
+    color: white; /* 文字变白 */
+}
+
+/* 4. 按钮被选中（激活）时的样式 */
+.bank-option-btn.active {
+    background: linear-gradient(90deg, var(--primary-glow), var(--secondary-glow)); /* 应用主题渐变色 */
+    color: white; /* 文字变白 */
+    font-weight: bold; /* 文字加粗 */
+    box-shadow: 0 0 10px rgba(0, 170, 255, 0.5); /* 添加辉光效果 */
 }

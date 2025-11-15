@@ -1,9 +1,14 @@
 // ====================================================================
-//  frontend/dashboard.js (Final & Complete - E-commerce Enabled)
+//  frontend/dashboard.js (Final & Complete - QR Code Payment Enabled)
+//  Author: Your Name
+//  Version: 1.0.0
 // ====================================================================
 
-// --- 1. Configuration & Global State ---
+// --- 1. CONFIGURATION & GLOBAL STATE ---
+
 const API_BASE_URL = 'http://127.0.0.1:8000';
+
+// API Endpoints
 const USERS_API_URL = `${API_BASE_URL}/users/`;
 const CHAT_API_URL = `${API_BASE_URL}/chat`;
 const ORDERS_API_URL = `${API_BASE_URL}/orders/`;
@@ -14,20 +19,36 @@ const POSTS_API_URL = `${API_BASE_URL}/posts/`;
 const PRODUCTS_API_URL = `${API_BASE_URL}/products`;
 const SUBSCRIPTION_API_URL = `${API_BASE_URL}/users/me/subscription`;
 
+// DOM Elements & State
 const appContainer = document.getElementById('app-container');
 let currentUser = null;
 const accessToken = localStorage.getItem('accessToken');
-let websocket = null;
+let websocket = null; // Global WebSocket connection object
 
-// --- 2. Core API Fetch Helper ---
+
+// --- 2. CORE API FETCH HELPER ---
+
+/**
+ * A wrapper for the fetch API to add authorization headers and handle errors.
+ * @param {string} url - The URL to fetch.
+ * @param {object} options - Fetch options (method, body, etc.).
+ * @returns {Promise<object|null>} - The JSON response or null.
+ */
 async function apiFetch(url, options = {}) {
     const defaultHeaders = { 'Authorization': `Bearer ${accessToken}` };
     if (!(options.body instanceof FormData)) {
         defaultHeaders['Content-Type'] = 'application/json';
     }
-    const config = { ...options, headers: { ...defaultHeaders, ...options.headers }, cache: 'no-cache' };
+
+    const config = {
+        ...options,
+        headers: { ...defaultHeaders, ...options.headers },
+        cache: 'no-cache', // Ensure we always get the latest data
+    };
+
     const response = await fetch(url, config);
     const contentType = response.headers.get("content-type");
+
     if (!response.ok) {
         let errorData = { detail: `HTTP error! status: ${response.status}` };
         if (contentType && contentType.indexOf("application/json") !== -1) {
@@ -35,26 +56,45 @@ async function apiFetch(url, options = {}) {
         }
         throw new Error(errorData.detail);
     }
-    if (response.status === 204 || !contentType || !contentType.includes("application/json")) return null;
+
+    if (response.status === 204 || !contentType || !contentType.includes("application/json")) {
+        return null;
+    }
+
     return response.json();
 }
 
-// --- 3. Initialization on Page Load ---
+
+// --- 3. INITIALIZATION & CORE RENDERING ---
+
+/**
+ * Runs on page load to authenticate the user and render the initial dashboard.
+ */
 document.addEventListener('DOMContentLoaded', async () => {
-    if (!accessToken) { window.location.href = 'login.html'; return; }
+    if (!accessToken) {
+        window.location.href = 'login.html';
+        return;
+    }
     try {
         currentUser = await apiFetch(USERS_ME_API_URL);
         renderDashboard();
-    } catch (e) { console.error("Session invalid:", e); logout(); }
+    } catch (e) {
+        console.error("Session is invalid or expired:", e);
+        logout();
+    }
 });
 
-// --- 4. Core Rendering Functions ---
+/**
+ * Renders the main dashboard structure (header, main content area).
+ */
 function renderDashboard() {
     appContainer.innerHTML = '';
     const dashboardContainer = document.createElement('div');
     dashboardContainer.className = 'dashboard-container';
+
     const header = document.createElement('header');
     const { permissions, user_type, email } = currentUser;
+
     let navLinks = `
         <a href="#" class="nav-link" data-view="profile">Profile</a>
         <a href="#" class="nav-link active-link" data-view="ai-diagnosis">AI Diagnosis</a>
@@ -63,7 +103,10 @@ function renderDashboard() {
         <a href="#" class="nav-link ${!permissions.can_shop ? 'disabled-link' : ''}" data-view="shopping">Shopping</a>
         <a href="#" class="nav-link ${!permissions.can_chat ? 'disabled-link' : ''}" data-view="chat">Chat</a>
     `;
-    if (user_type === 'business') navLinks += `<a href="#" class="nav-link" data-view="business-profile">Business Profile</a>`;
+    if (user_type === 'business') {
+        navLinks += `<a href="#" class="nav-link" data-view="business-profile">Business Profile</a>`;
+    }
+
     header.innerHTML = `
         <div class="logo">Sarawak <span>Agri-Advisor</span></div>
         <nav>${navLinks}</nav>
@@ -72,25 +115,39 @@ function renderDashboard() {
             <button id="logoutButton" class="nav-button">Logout</button>
         </div>
     `;
+
     dashboardContainer.appendChild(header);
+
     const main = document.createElement('main');
     main.id = 'mainContent';
     dashboardContainer.appendChild(main);
     appContainer.appendChild(dashboardContainer);
+
     attachNavListeners();
     document.getElementById('logoutButton').addEventListener('click', logout);
+
+    // Navigate to a view based on URL parameters or default to AI Diagnosis
     const urlParams = new URLSearchParams(window.location.search);
     renderView(urlParams.get('view') || 'ai-diagnosis', urlParams.get('userId'));
 }
 
+/**
+ * Renders the content for a specific view (e.g., 'posts', 'chat').
+ * @param {string} viewId - The ID of the view to render.
+ * @param {string|null} param - An optional parameter for the view (e.g., a user ID).
+ */
 async function renderView(viewId, param) {
     const mainContent = document.getElementById('mainContent');
     mainContent.innerHTML = `<div class="card full-width" style="text-align: center;"><div class="spinner"></div></div>`;
+
     document.querySelectorAll('nav a, nav button').forEach(link => {
         link.classList.remove('active-link');
-        if (link.dataset.view === viewId) link.classList.add('active-link');
+        if (link.dataset.view === viewId) {
+            link.classList.add('active-link');
+        }
     });
-    
+
+    // Close WebSocket connection if navigating away from the chat view
     if (websocket && viewId !== 'chat') {
         console.log("Leaving chat view, closing WebSocket.");
         websocket.close();
@@ -98,45 +155,62 @@ async function renderView(viewId, param) {
     }
 
     try {
-        if (viewId === 'chat') {
-            await renderChatView(param);
-        } else if (viewId === 'ai-diagnosis') {
-            mainContent.innerHTML = getAIDiagnosisHTML();
-            attachDiagnosisListeners();
-        } else if (viewId === 'diagnosis-history') {
-            const history = await apiFetch(DIAGNOSES_HISTORY_API_URL);
-            mainContent.innerHTML = getDiagnosisHistoryHTML(history);
-        } else if (viewId === 'posts') {
-            const posts = await apiFetch(POSTS_API_URL);
-            mainContent.innerHTML = getPostsHTML(posts);
-            attachPostListeners();
-        } else if (viewId === 'shopping') {
-            const products = await apiFetch(PRODUCTS_API_URL);
-            mainContent.innerHTML = getShoppingHTML(products);
-            attachShoppingListeners();
-        } else if (viewId === 'business-profile' && currentUser.user_type === 'business') {
-            const myProducts = await apiFetch(`${PRODUCTS_API_URL}/me`);
-            mainContent.innerHTML = getBusinessProfileHTML(myProducts);
-            attachAddProductListeners();
-        } else if (viewId === 'profile') {
-            const latestUser = await apiFetch(USERS_ME_API_URL);
-            currentUser = latestUser;
-            mainContent.innerHTML = getProfileHTML(currentUser);
-            attachPlanButtonListeners();
-        } else {
-            mainContent.innerHTML = `<div class="card full-width"><p>Content for this view is coming soon.</p></div>`;
+        switch (viewId) {
+            case 'chat':
+                await renderChatView(param);
+                break;
+            case 'ai-diagnosis':
+                mainContent.innerHTML = getAIDiagnosisHTML();
+                attachDiagnosisListeners();
+                break;
+            case 'diagnosis-history':
+                const history = await apiFetch(DIAGNOSES_HISTORY_API_URL);
+                mainContent.innerHTML = getDiagnosisHistoryHTML(history);
+                break;
+            case 'posts':
+                const posts = await apiFetch(POSTS_API_URL);
+                mainContent.innerHTML = getPostsHTML(posts);
+                attachPostListeners();
+                break;
+            case 'shopping':
+                const products = await apiFetch(PRODUCTS_API_URL);
+                mainContent.innerHTML = getShoppingHTML(products);
+                attachShoppingListeners();
+                break;
+            case 'business-profile':
+                if (currentUser.user_type === 'business') {
+                    const myProducts = await apiFetch(`${PRODUCTS_API_URL}/me`);
+                    mainContent.innerHTML = getBusinessProfileHTML(myProducts);
+                    attachAddProductListeners();
+                }
+                break;
+            case 'profile':
+                const latestUser = await apiFetch(USERS_ME_API_URL);
+                currentUser = latestUser;
+                mainContent.innerHTML = getProfileHTML(currentUser);
+                attachPlanButtonListeners();
+                break;
+            default:
+                mainContent.innerHTML = `<div class="card full-width"><p>Content for this view is coming soon.</p></div>`;
         }
     } catch (error) {
         mainContent.innerHTML = `<div class="card full-width error-message"><p>Failed to load view: ${error.message}</p></div>`;
     }
 }
 
+/**
+ * Renders a public profile page for a given user.
+ * @param {number} userId - The ID of the user to display.
+ */
 async function renderUserProfileView(userId) {
     const mainContent = document.getElementById('mainContent');
     mainContent.innerHTML = `<div class="card full-width" style="text-align: center;"><div class="spinner"></div></div>`;
     try {
         const userProfile = await apiFetch(`${USERS_API_URL}${userId}/profile`);
-        const avatarUrl = userProfile.avatar_url ? `${API_BASE_URL}${userProfile.avatar_url}` : `https://ui-avatars.com/api/?name=${encodeURIComponent(userProfile.name)}&background=random&color=fff&size=128`;
+        const avatarUrl = userProfile.avatar_url
+            ? `${API_BASE_URL}${userProfile.avatar_url}`
+            : `https://ui-avatars.com/api/?name=${encodeURIComponent(userProfile.name)}&background=random&color=fff&size=128`;
+
         mainContent.innerHTML = `
             <div class="card full-width" style="max-width: 600px; margin: auto; text-align: center;">
                 <img src="${avatarUrl}" class="avatar" style="width: 100px; height: 100px; margin-bottom: 20px;">
@@ -146,15 +220,15 @@ async function renderUserProfileView(userId) {
             </div>
         `;
         document.getElementById('startChatBtn').addEventListener('click', (e) => {
-            const targetUserId = e.currentTarget.dataset.userId;
-            renderView('chat', targetUserId);
+            renderView('chat', e.currentTarget.dataset.userId);
         });
     } catch (error) {
         mainContent.innerHTML = `<div class="card full-width error-message"><p>Failed to load user profile: ${error.message}</p></div>`;
     }
 }
 
-// --- 5. HTML Template Generators ---
+
+// --- 5. HTML TEMPLATE GENERATORS ---
 
 function getAIDiagnosisHTML() {
     return `
@@ -311,13 +385,8 @@ function getProfileHTML(user) {
     else if (tier === 'tier_20') planName = 'Business Pro (RM20)';
     let planButtonsHTML = '';
     if (user.user_type === 'public') {
-        if (tier !== 'tier_10') {
-            planButtonsHTML += `<button class="glow-button plan-btn" data-plan="tier_10">Subscribe to RM10 Plan</button>`;
-        }
-        if (tier !== 'tier_15') {
-            const buttonText = (tier === 'tier_10') ? 'Upgrade to RM15 Plan' : 'Subscribe to RM15 Plan';
-            planButtonsHTML += `<button class="glow-button plan-btn" data-plan="tier_15">${buttonText}</button>`;
-        }
+        if (tier !== 'tier_10') planButtonsHTML += `<button class="glow-button plan-btn" data-plan="tier_10">Subscribe to RM10 Plan</button>`;
+        if (tier !== 'tier_15') planButtonsHTML += `<button class="glow-button plan-btn" data-plan="tier_15">${tier === 'tier_10' ? 'Upgrade to RM15 Plan' : 'Subscribe to RM15 Plan'}</button>`;
     }
     if (user.user_type === 'business' && tier !== 'tier_20') {
         planButtonsHTML += `<button class="glow-button plan-btn" data-plan="tier_20">Subscribe to RM20 Business Plan</button>`;
@@ -332,16 +401,13 @@ function getProfileHTML(user) {
             <p><strong>User Type:</strong> ${user.user_type}</p>
             <p><strong>Current Plan:</strong> ${planName}</p>
             <h4 style="margin-top: 30px;">Change Plan</h4>
-            <div class="plans" style="display: flex; flex-wrap: wrap; gap: 20px; align-items: center;">
-                ${planButtonsHTML}
-            </div>
+            <div class="plans" style="display: flex; flex-wrap: wrap; gap: 20px; align-items: center;">${planButtonsHTML}</div>
             <p id="payment-error" class="error-message"></p>
         </div>
     `;
 }
 
 function renderReport(data) {
-    const reportContainer = document.getElementById('reportContainer');
     let xaiImageHTML = '';
     if (data.xai_image_url) {
         xaiImageHTML = `
@@ -352,7 +418,7 @@ function renderReport(data) {
             </div>
         `;
     }
-    reportContainer.innerHTML = `
+    document.getElementById('reportContainer').innerHTML = `
         <div class="report-section"><h3>${data.title}</h3></div>
         <div class="report-section"><h4>Diagnosis Summary</h4><p>${data.diagnosis_summary}</p></div>
         <div class="report-section"><h4>Environmental Context</h4><p>${data.environmental_context}</p></div>
@@ -361,8 +427,7 @@ function renderReport(data) {
     `;
 }
 
-
-// --- Chat Related Functions ---
+// --- CHAT RELATED FUNCTIONS ---
 
 function getChatHTML() {
     return `
@@ -433,8 +498,7 @@ async function openChat(userId, userName) {
             messagesDiv.innerHTML = '<p class="chat-placeholder">This is the beginning of your conversation.</p>';
         } else {
             history.forEach(msg => {
-                const messageType = msg.sender_id === currentUser.id ? 'sent' : 'received';
-                appendMessage(msg.content, messageType);
+                appendMessage(msg.content, msg.sender_id === currentUser.id ? 'sent' : 'received');
             });
         }
     } catch (error) {
@@ -492,7 +556,7 @@ function connectWebSocket() {
     websocket.onerror = (error) => console.error("WebSocket error:", error);
 }
 
-// --- E-commerce Related Functions ---
+// --- E-COMMERCE RELATED FUNCTIONS ---
 
 function showOrderModal(product) {
     const oldModal = document.getElementById('orderModal');
@@ -508,7 +572,7 @@ function showOrderModal(product) {
             <p>Price: RM <span id="modalPrice">${product.price}</span></p>
             
             <form id="orderForm">
-                <h4>Shipping Information</h4>
+                <h4>1. Shipping Information</h4>
                 <input type="text" name="recipient_name" placeholder="Full Name" required>
                 <input type="tel" name="recipient_phone" placeholder="Phone Number" required>
                 <textarea name="shipping_address" placeholder="Shipping Address" required></textarea>
@@ -520,32 +584,81 @@ function showOrderModal(product) {
                 
                 <h3 style="margin-top: 20px;">Total: RM <span id="totalPrice">${product.price}</span></h3>
 
-                <h4>Payment Method</h4>
-                <select name="payment_method" required>
+                <h4>2. Payment Method</h4>
+                <select id="paymentMethodSelect" name="payment_method" required>
                     <option value="spay">SPay Global</option>
                     <option value="tng">Touch 'n Go eWallet</option>
                     <option value="bank">Online Banking</option>
                 </select>
-                <input type="text" name="account_number" placeholder="Enter 16-digit Account Number" pattern="[0-9]{16}" title="Please enter exactly 16 digits" required>
+
+                <!-- 支付详情容器 -->
+                <div id="paymentDetails">
+                    <!-- SPay QR (默认显示) -->
+                    <div id="spay-details" class="payment-option">
+                        <p>Please scan the QR code below to pay:</p>
+                        <img src="./assets/Spay.jpg" alt="SPay QR Code" class="qr-code">
+                    </div>
+                    <!-- TnG QR -->
+                    <div id="tng-details" class="payment-option hidden">
+                        <p>Please scan with your TnG eWallet to pay:</p>
+                        <img src="./assets/TnG.jpg" alt="TnG QR Code" class="qr-code">
+                    </div>
+                    <!-- Online Bank -->
+                    <div id="bank-details" class="payment-option hidden">
+                        <div class="bank-choice">
+                            <button type="button" class="bank-option-btn active" data-method="qr">Scan QR Code</button>
+                            <button type="button" class="bank-option-btn" data-method="manual">Bank Account Number</button>
+                        </div>
+                        <div id="bank-qr" class="bank-method">
+                            <p>Please scan the DuitNow QR code to pay:</p>
+                            <img src="./assets/DuitNow.jpg" alt="Maybank DuitNow QR" class="qr-code">
+                        </div>
+                        <div id="bank-manual" class="bank-method hidden">
+                            <select name="bank_type">
+                                <option>Maybank</option>
+                                <option>Public Bank</option>
+                                <option>Hong Leong Bank</option>
+                                <option>Bank Islam</option>
+                            </select>
+                            <input type="text" name="account_number" placeholder="Enter 16-digit Account Number" pattern="[0-9]{16}" title="Please enter exactly 16 digits">
+                        </div>
+                    </div>
+                </div>
                 
-                <button type="submit" class="glow-button">Confirm Purchase</button>
+                <button type="submit" class="glow-button">I Have Paid, Confirm Purchase</button>
                 <p id="order-error" class="error-message"></p>
             </form>
         </div>
     `;
     document.body.appendChild(modal);
 
+    // --- 事件绑定 (这部分代码保持不变) ---
     const closeModal = () => modal.remove();
     modal.querySelector('.close-modal').onclick = closeModal;
     modal.onclick = (e) => { if (e.target === modal) closeModal(); };
 
     const quantityInput = modal.querySelector('#quantity');
     const totalPriceSpan = modal.querySelector('#totalPrice');
-
     quantityInput.addEventListener('input', () => {
         const quantity = parseInt(quantityInput.value) || 0;
-        const total = (quantity * parseFloat(product.price)).toFixed(2);
-        totalPriceSpan.textContent = total;
+        totalPriceSpan.textContent = (quantity * parseFloat(product.price)).toFixed(2);
+    });
+    
+    const paymentSelect = modal.querySelector('#paymentMethodSelect');
+    paymentSelect.addEventListener('change', () => {
+        const selectedMethod = paymentSelect.value;
+        modal.querySelectorAll('.payment-option').forEach(opt => opt.classList.add('hidden'));
+        document.getElementById(`${selectedMethod}-details`).classList.remove('hidden');
+    });
+
+    modal.querySelectorAll('.bank-option-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            modal.querySelectorAll('.bank-option-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            const method = btn.dataset.method;
+            modal.querySelectorAll('.bank-method').forEach(m => m.classList.add('hidden'));
+            document.getElementById(`bank-${method}`).classList.remove('hidden');
+        });
     });
 
     modal.querySelector('#orderForm').addEventListener('submit', async (e) => {
@@ -554,21 +667,21 @@ function showOrderModal(product) {
         errorP.textContent = 'Processing...';
 
         const formData = new FormData(e.target);
+        
+        if (formData.get('payment_method') === 'bank' && document.querySelector('.bank-option-btn[data-method="manual"]').classList.contains('active')) {
+            const accountNumber = formData.get('account_number');
+            if (!/^\d{16}$/.test(accountNumber)) {
+                errorP.textContent = 'Invalid account number. Must be 16 digits.';
+                return;
+            }
+        }
+        
         const orderData = {
             recipient_name: formData.get('recipient_name'),
             recipient_phone: formData.get('recipient_phone'),
             shipping_address: formData.get('shipping_address'),
-            items: [{
-                product_id: parseInt(product.id),
-                quantity: parseInt(formData.get('quantity'))
-            }]
+            items: [{ product_id: parseInt(product.id), quantity: parseInt(formData.get('quantity')) }]
         };
-
-        const accountNumber = formData.get('account_number');
-        if (!/^\d{16}$/.test(accountNumber)) {
-            errorP.textContent = 'Invalid account number. Must be 16 digits.';
-            return;
-        }
 
         try {
             const result = await apiFetch(ORDERS_API_URL, {
@@ -583,13 +696,16 @@ function showOrderModal(product) {
     });
 }
 
-// --- 6. Event Listeners & Interaction Logic ---
+
+// --- 6. EVENT LISTENERS & INTERACTION LOGIC ---
+
 function attachNavListeners() {
     document.querySelectorAll('nav a, nav button').forEach(link => {
         link.addEventListener('click', (e) => {
             e.preventDefault();
             if (e.currentTarget.classList.contains('disabled-link')) {
-                alert('This feature is not available for your current subscription plan.'); return;
+                alert('This feature is not available for your current subscription plan.'); 
+                return;
             }
             renderView(e.currentTarget.dataset.view);
         });
@@ -617,15 +733,15 @@ async function getGPSAndDiagnose(file) {
     const reportContainer = document.getElementById('reportContainer');
     loadingIndicator.classList.remove('hidden');
     reportContainer.innerHTML = '';
+    
     navigator.geolocation.getCurrentPosition(
         async (position) => {
             const { latitude, longitude } = position.coords;
-            const selectedLanguage = document.getElementById('languageSelect').value;
             const formData = new FormData();
             formData.append("image", file);
             formData.append("latitude", latitude);
             formData.append("longitude", longitude);
-            formData.append("language", selectedLanguage);
+            formData.append("language", document.getElementById('languageSelect').value);
             try {
                 const data = await apiFetch(DIAGNOSE_API_URL, { method: 'POST', body: formData });
                 renderReport(data);
@@ -652,11 +768,10 @@ function attachPlanButtonListeners() {
             const planDisplayName = plan === 'free' ? 'Free Tier' : plan.replace('tier_', 'RM ');
             if (!confirm(`Are you sure you want to switch to the ${planDisplayName} plan?`)) return;
             try {
-                const updatedUser = await apiFetch(SUBSCRIPTION_API_URL, {
+                currentUser = await apiFetch(SUBSCRIPTION_API_URL, {
                     method: 'PUT',
                     body: JSON.stringify({ plan: plan }),
                 });
-                currentUser = updatedUser;
                 alert('Plan updated successfully!');
                 renderView('profile');
             } catch (error) {
@@ -678,14 +793,12 @@ function attachPostListeners() {
                 addLocationBtn.textContent = '📍 Add Location';
                 return;
             }
-            const choice = confirm("Use current GPS location? Press 'Cancel' to enter manually.");
-            if (choice) {
+            if (confirm("Use current GPS location? Press 'Cancel' to enter manually.")) {
                 if (!navigator.geolocation) { alert("Geolocation is not supported."); return; }
                 addLocationBtn.textContent = 'Fetching...';
                 navigator.geolocation.getCurrentPosition(
                     (position) => {
-                        const { latitude, longitude } = position.coords;
-                        postLocationInput.value = `Lat: ${latitude.toFixed(4)}, Lon: ${longitude.toFixed(4)}`;
+                        postLocationInput.value = `Lat: ${position.coords.latitude.toFixed(4)}, Lon: ${position.coords.longitude.toFixed(4)}`;
                         postLocationInput.classList.remove('hidden');
                         addLocationBtn.textContent = '📍 Location Added';
                     },
@@ -703,9 +816,8 @@ function attachPostListeners() {
         });
         postForm.addEventListener('submit', async (e) => {
             e.preventDefault();
-            const formData = new FormData(postForm);
             try {
-                await apiFetch(POSTS_API_URL, { method: 'POST', body: formData });
+                await apiFetch(POSTS_API_URL, { method: 'POST', body: new FormData(postForm) });
                 renderView('posts');
             } catch (error) {
                 document.getElementById('post-error').textContent = `Failed to post: ${error.message}`;
@@ -721,10 +833,7 @@ function attachPostListeners() {
                 const content = commentForm.querySelector('input[name="content"]').value;
                 if (!content.trim()) return;
                 try {
-                    await apiFetch(`${POSTS_API_URL}${postId}/comments/`, {
-                        method: 'POST',
-                        body: JSON.stringify({ content: content })
-                    });
+                    await apiFetch(`${POSTS_API_URL}${postId}/comments/`, { method: 'POST', body: JSON.stringify({ content: content }) });
                     renderView('posts');
                 } catch (error) {
                     alert(`Failed to comment: ${error.message}`);
@@ -745,8 +854,9 @@ function attachPostListeners() {
         const shareBtn = card.querySelector('.share-btn');
         if (shareBtn) {
             shareBtn.addEventListener('click', () => {
-                const postUrl = `${window.location.origin}${window.location.pathname}?view=post&id=${postId}`;
-                navigator.clipboard.writeText(postUrl).then(() => alert('Post link copied!')).catch(() => alert('Failed to copy.'));
+                navigator.clipboard.writeText(`${window.location.origin}${window.location.pathname}?view=post&id=${postId}`)
+                    .then(() => alert('Post link copied!'))
+                    .catch(() => alert('Failed to copy.'));
             });
         }
         card.querySelectorAll('.user-profile-link').forEach(link => {
@@ -778,9 +888,8 @@ function attachAddProductListeners() {
             e.preventDefault();
             const errorP = document.getElementById('product-error');
             errorP.textContent = '';
-            const formData = new FormData(productForm);
             try {
-                await apiFetch(PRODUCTS_API_URL, { method: 'POST', body: formData });
+                await apiFetch(PRODUCTS_API_URL, { method: 'POST', body: new FormData(productForm) });
                 alert('Product added successfully!');
                 renderView('business-profile');
             } catch (error) {
