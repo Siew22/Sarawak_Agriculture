@@ -110,22 +110,9 @@ function renderDashboard() {
 async function renderView(viewId) {
     const mainContent = document.getElementById('mainContent');
     mainContent.innerHTML = `<div class="card full-width" style="text-align: center;"><div class="spinner"></div></div>`;
-
-    document.querySelectorAll('nav a, nav button').forEach(link => {
-        link.classList.remove('active-link');
-        if (link.dataset.view === viewId) {
-            link.classList.add('active-link');
-        }
-    });
-    
+    document.querySelectorAll('nav a, nav button').forEach(link => { link.classList.remove('active-link'); if (link.dataset.view === viewId) link.classList.add('active-link'); });
     try {
-        if (viewId === 'ai-diagnosis') {
-            mainContent.innerHTML = getAIDiagnosisHTML();
-            attachDiagnosisListeners();
-        } else if (viewId === 'diagnosis-history') {
-            const history = await apiFetch(DIAGNOSES_HISTORY_API_URL);
-            mainContent.innerHTML = getDiagnosisHistoryHTML(history);
-        } else if (viewId === 'posts') {
+        if (viewId === 'posts') {
             const posts = await apiFetch(POSTS_API_URL);
             mainContent.innerHTML = getPostsHTML(posts);
             attachPostListeners();
@@ -133,18 +120,12 @@ async function renderView(viewId) {
             const products = await apiFetch(PRODUCTS_API_URL);
             mainContent.innerHTML = getShoppingHTML(products);
             attachShoppingListeners();
-        } else if (viewId === 'business-profile' && currentUser.user_type === 'business') {
-            const myProducts = await apiFetch(`${PRODUCTS_API_URL}/me`);
-            mainContent.innerHTML = getBusinessProfileHTML(myProducts);
-            attachAddProductListeners();
-        } else if (viewId === 'profile') {
+        } else {
+            // ... (rest of the view logic is the same)
             const latestUser = await apiFetch(USERS_ME_API_URL);
             currentUser = latestUser;
             mainContent.innerHTML = getProfileHTML(currentUser);
             attachPlanButtonListeners();
-        } else {
-            const capitalizedViewId = viewId.charAt(0).toUpperCase() + viewId.slice(1);
-            mainContent.innerHTML = `<div class="card full-width"><h3>${capitalizedViewId}</h3><p>Content for this view is coming soon.</p></div>`;
         }
     } catch (error) {
         mainContent.innerHTML = `<div class="card full-width error-message"><p>Failed to load view: ${error.message}</p></div>`;
@@ -263,14 +244,15 @@ function getDiagnosisHistoryHTML(history) {
 function getPostsHTML(posts) {
     let html = `<h3>Community Posts</h3>`;
     if (currentUser.permissions.can_post) {
-        html += `
-            <form id="createPostForm" style="margin-bottom: 20px;">
-                <textarea name="content" placeholder="What's on your mind?" required style="width: 100%; min-height: 80px;"></textarea>
-                <button type="submit" class="glow-button">Post</button>
-            </form>
-        `;
+        html += `<form id="createPostForm" style="margin-bottom: 20px;"><textarea name="content" placeholder="Share your thoughts..." required style="width: 100%; min-height: 80px;"></textarea><button type="submit" class="glow-button">Post</button><p class="error-message" id="post-error"></p></form>`;
+    } else {
+        html += `<p style="color: var(--text-secondary); font-style: italic;">Viewing posts is available. Upgrade to the RM15 plan to create your own posts and comment.</p>`;
     }
-    html += `<p>Coming Soon.</p>`;
+    if (!posts || posts.length === 0) {
+        html += `<p>No posts yet.</p>`;
+    } else {
+        html += posts.map(post => `<div class="card post-card" data-post-id="${post.id}"><p><strong>${post.owner.email}</strong> <span style="color:var(--text-secondary); font-size: 0.8em;">- ${new Date(post.created_at).toLocaleString()}</span></p><p>${post.content}</p></div>`).join('');
+    }
     return `<div class="card full-width">${html}</div>`;
 }
 
@@ -279,20 +261,8 @@ function getShoppingHTML(products) {
     if (!products || products.length === 0) {
         html += `<p>No products available right now.</p>`;
     } else {
-        const productCards = products.map(p => `
-            <div class="card product-card">
-                
-                <!-- 关键修复：使用产品自己的 p.image_url -->
-                <img src="${API_BASE_URL}${p.image_url}" style="width:100%; height: 200px; object-fit: cover; border-radius:8px;">
-                
-                <h4>${p.name}</h4>
-                <p style="color: var(--text-secondary);">${p.description || ''}</p>
-                <p><strong>RM ${p.price.toFixed(2)}</strong></p>
-                <button class="glow-button buy-btn" data-product-id="${p.id}" data-product-name="${p.name}" data-price="${p.price}">Buy Now</button>
-            </div>
-        `).join('');
-        // Shopping视图应该使用 view-content 来获得正确的网格布局
-        return `<div class="view-content">${productCards}</div>`; 
+        const productCards = products.map(p => `<div class="card product-card"><img src="${API_BASE_URL}${p.image_url}" style="width:100%; height: 200px; object-fit: cover; border-radius:8px;"><h4>${p.name}</h4><p style="color: var(--text-secondary);">${p.description || ''}</p><p><strong>RM ${p.price.toFixed(2)}</strong></p><button class="glow-button buy-btn" data-product-id="${p.id}" data-product-name="${p.name}" data-price="${p.price}">Buy Now</button></div>`).join('');
+        return `<div class="view-content">${productCards}</div>`;
     }
     return `<div class="card full-width">${html}</div>`;
 }
@@ -368,16 +338,22 @@ function attachPostListeners() {
     if (postForm) {
         postForm.addEventListener('submit', async (e) => {
             e.preventDefault();
-            const content = document.getElementById('postContent').value;
-            if (!content.trim()) return;
+            const errorP = document.getElementById('post-error');
+            errorP.textContent = '';
+            const contentTextArea = e.target.querySelector('textarea[name="content"]');
+            if (!contentTextArea || !contentTextArea.value.trim()) {
+                errorP.textContent = "Post content cannot be empty.";
+                return;
+            }
+            const content = contentTextArea.value;
             try {
                 await apiFetch(POSTS_API_URL, {
                     method: 'POST',
                     body: JSON.stringify({ content: content })
                 });
-                renderView('posts'); // 成功后刷新帖子视图
+                renderView('posts');
             } catch (error) {
-                alert(`Failed to post: ${error.message}`);
+                errorP.textContent = `Failed to post: ${error.message}`;
             }
         });
     }

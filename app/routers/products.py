@@ -68,7 +68,7 @@ async def create_new_product(
     try:
         with open(file_path, "wb") as buffer:
             shutil.copyfileobj(image.file, buffer)
-        image_url = f"/static/products/{unique_filename}"
+        image_url = Path("/static/products") / unique_filename
     except Exception:
         raise HTTPException(status_code=500, detail="Could not save product image.")
     
@@ -77,8 +77,8 @@ async def create_new_product(
         db=db, 
         product=product_data, 
         user_id=current_user.id, 
-        image_url=image_url
-    )
+        image_url=str(image_url).replace("\\", "/") # 确保是正斜杠
+        )
 
 # --- 关键修复：为 "my products" 添加一个明确的 /me 路径 ---
 @router.get("/me", response_model=List[Product])
