@@ -6,16 +6,15 @@ from app import database, crud
 # --- 套餐配置 ---
 PLAN_CONFIG = {
     'free': {
-        'public': {'api_limit': 10, 'limit_duration_hours': 1, 'can_chat': False, 'can_post': False, 'can_shop': False},
-        'business': {'api_limit': 10, 'limit_duration_hours': 1, 'can_chat': False, 'can_post': False, 'can_shop': True}
+        'public': {'api_limit': 10, 'limit_duration_hours': 1, 'can_chat': False, 'can_post': False, 'can_shop': False, 'can_comment': False, 'can_like_share': False},
+        'business': {'api_limit': 10, 'limit_duration_hours': 1, 'can_chat': False, 'can_post': False, 'can_shop': True, 'can_comment': False, 'can_like_share': False}
     },
     'tier_10': {
-        'public': {'api_limit': 50, 'limit_duration_hours': 8, 'can_chat': True, 'can_post': False, 'can_shop': True},
-        'business': None # Business user 没有 RM10 套餐
+        'public': {'api_limit': 50, 'limit_duration_hours': 8, 'can_chat': True, 'can_post': False, 'can_shop': True, 'can_comment': False, 'can_like_share': True},
+        'business': None 
     },
-    'tier_20': {
-        'public': {'api_limit': 100, 'limit_duration_hours': 6, 'can_chat': True, 'can_post': True, 'can_shop': True},
-        'business': {'api_limit': 100, 'limit_duration_hours': 6, 'can_chat': True, 'can_post': True, 'can_shop': True}
+    'tier_15': { # <--- 新增 RM15 套餐
+        'public': {'api_limit': 100, 'limit_duration_hours': 6, 'can_chat': True, 'can_post': True, 'can_shop': True, 'can_comment': True, 'can_like_share': True},
     }
 }
 

@@ -75,7 +75,7 @@ function renderDashboard() {
         <a href="#" class="nav-link" data-view="profile">Profile</a>
         <a href="#" class="nav-link active-link" data-view="ai-diagnosis">AI Diagnosis</a>
         <a href="#" class="nav-link" data-view="diagnosis-history">History</a>
-        <a href="#" class="nav-link ${!permissions.can_post ? 'disabled-link' : ''}" data-view="posts">Posts</a>
+        <a href="#" class="nav-link" data-view="posts">Posts</a>
         <a href="#" class="nav-link ${!permissions.can_chat ? 'disabled-link' : ''}" data-view="chat">Chat</a>
         <a href="#" class="nav-link ${!permissions.can_shop ? 'disabled-link' : ''}" data-view="shopping">Shopping</a>
     `;
@@ -131,8 +131,6 @@ async function renderView(viewId) {
         } else if (viewId === 'business-profile' && currentUser.user_type === 'business') {
             mainContent.innerHTML = getBusinessProfileHTML();
         } else if (viewId === 'profile') {
-            const latestUser = await apiFetch(USERS_ME_API_URL);
-            currentUser = latestUser;
             mainContent.innerHTML = getProfileHTML(currentUser);
             attachPlanButtonListeners();
         } else {
@@ -359,18 +357,23 @@ function attachPlanButtonListeners() {
             const plan = e.target.dataset.plan;
             const errorP = document.getElementById('payment-error');
             errorP.textContent = '';
+            
             const planDisplayName = plan === 'free' ? 'Free Tier' : plan.replace('tier_', 'RM ');
             if (!confirm(`Are you sure you want to switch to the ${planDisplayName} plan?`)) {
                 return;
             }
+            
             try {
                 const updatedUser = await apiFetch(SUBSCRIPTION_API_URL, {
                     method: 'PUT',
                     body: JSON.stringify({ plan: plan }),
                 });
+                
                 currentUser = updatedUser;
                 alert('Plan updated successfully!');
+                
                 renderView('profile');
+
             } catch (error) {
                 errorP.textContent = `Failed to update plan: ${error.message}`;
             }
