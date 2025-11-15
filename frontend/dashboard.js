@@ -7,7 +7,7 @@ const API_BASE_URL = 'http://127.0.0.1:8000';
 const USERS_ME_API_URL = `${API_BASE_URL}/users/me`;
 const DIAGNOSE_API_URL = `${API_BASE_URL}/diagnose`;
 const DIAGNOSES_HISTORY_API_URL = `${API_BASE_URL}/diagnoses/me`;
-const POSTS_API_URL = `${API_BASE_URL}/posts`;
+const POSTS_API_URL = `${API_BASE_URL}/posts/`;
 const PRODUCTS_API_URL = `${API_BASE_URL}/products`;
 const SUBSCRIPTION_API_URL = `${API_BASE_URL}/users/me/subscription`;
 
@@ -71,7 +71,6 @@ function renderDashboard() {
     const header = document.createElement('header');
     const { permissions, user_type, email } = currentUser;
     
-    // --- 关键修复：所有禁用逻辑都严格依赖于后端返回的 permissions 对象 ---
     let navLinks = `
         <a href="#" class="nav-link" data-view="profile">Profile</a>
         <a href="#" class="nav-link active-link" data-view="ai-diagnosis">AI Diagnosis</a>
@@ -93,8 +92,7 @@ function renderDashboard() {
         </div>
     `;
     dashboardContainer.appendChild(header);
-    
-    // ... (main content rendering remains the same)
+
     const main = document.createElement('main');
     main.id = 'mainContent';
     dashboardContainer.appendChild(main);
@@ -104,15 +102,29 @@ function renderDashboard() {
     document.getElementById('logoutButton').addEventListener('click', logout);
 
     const urlParams = new URLSearchParams(window.location.search);
-    renderView(urlParams.get('view') || 'ai-diagnosis');
+    const view = urlParams.get('view');
+    renderView(view || 'ai-diagnosis');
 }
 
 async function renderView(viewId) {
     const mainContent = document.getElementById('mainContent');
     mainContent.innerHTML = `<div class="card full-width" style="text-align: center;"><div class="spinner"></div></div>`;
-    document.querySelectorAll('nav a, nav button').forEach(link => { link.classList.remove('active-link'); if (link.dataset.view === viewId) link.classList.add('active-link'); });
+
+    document.querySelectorAll('nav a, nav button').forEach(link => {
+        link.classList.remove('active-link');
+        if (link.dataset.view === viewId) {
+            link.classList.add('active-link');
+        }
+    });
+    
     try {
-        if (viewId === 'posts') {
+        if (viewId === 'ai-diagnosis') {
+            mainContent.innerHTML = getAIDiagnosisHTML();
+            attachDiagnosisListeners();
+        } else if (viewId === 'diagnosis-history') {
+            const history = await apiFetch(DIAGNOSES_HISTORY_API_URL);
+            mainContent.innerHTML = getDiagnosisHistoryHTML(history);
+        } else if (viewId === 'posts') {
             const posts = await apiFetch(POSTS_API_URL);
             mainContent.innerHTML = getPostsHTML(posts);
             attachPostListeners();
@@ -120,75 +132,24 @@ async function renderView(viewId) {
             const products = await apiFetch(PRODUCTS_API_URL);
             mainContent.innerHTML = getShoppingHTML(products);
             attachShoppingListeners();
-        } else {
-            // ... (rest of the view logic is the same)
+        } else if (viewId === 'business-profile' && currentUser.user_type === 'business') {
+            const myProducts = await apiFetch(`${PRODUCTS_API_URL}/me`);
+            mainContent.innerHTML = getBusinessProfileHTML(myProducts);
+            attachAddProductListeners();
+        } else if (viewId === 'profile') {
             const latestUser = await apiFetch(USERS_ME_API_URL);
             currentUser = latestUser;
             mainContent.innerHTML = getProfileHTML(currentUser);
             attachPlanButtonListeners();
+        } else if (viewId === 'chat'){ // <--- 关键修复：添加此逻辑块
+             mainContent.innerHTML = getChatHTML();
+        } else {
+            const capitalizedViewId = viewId.charAt(0).toUpperCase() + viewId.slice(1);
+            mainContent.innerHTML = `<div class="card full-width"><h3>${capitalizedViewId}</h3><p>Content for this view is coming soon.</p></div>`;
         }
     } catch (error) {
         mainContent.innerHTML = `<div class="card full-width error-message"><p>Failed to load view: ${error.message}</p></div>`;
     }
-}
-
-function getCheckoutHTML(product) {
-    return `
-        <div class="card full-width">
-            <h3>Checkout</h3>
-            <p>You are buying: <strong>${product.name}</strong> for <strong>RM ${product.price.toFixed(2)}</strong></p>
-            <form id="checkoutForm">
-                <input type="text" id="recipientName" placeholder="Full Name" required>
-                <input type="tel" id="recipientPhone" placeholder="Phone Number" required>
-                <textarea id="shippingAddress" placeholder="Shipping Address" required style="..."></textarea>
-                <button type="submit" class="glow-button">Confirm Purchase</button>
-            </form>
-            <p id="checkout-error" class="error-message"></p>
-        </div>
-    `;
-}
-
-// --- Event Listeners & Interaction Logic (UPDATED) ---
-
-function attachShoppingListeners() {
-    document.querySelectorAll('.buy-btn').forEach(button => {
-        button.addEventListener('click', (e) => {
-            const product = {
-                id: e.target.dataset.productId,
-                name: e.target.dataset.productName,
-                price: parseFloat(e.target.dataset.price)
-            };
-            // 切换到结账视图
-            const mainContent = document.getElementById('mainContent');
-            mainContent.innerHTML = getCheckoutHTML(product);
-            
-            // 为结账表单绑定事件
-            document.getElementById('checkoutForm').addEventListener('submit', async (submitEvent) => {
-                submitEvent.preventDefault();
-                const errorP = document.getElementById('checkout-error');
-                errorP.textContent = '';
-
-                const orderData = {
-                    recipient_name: document.getElementById('recipientName').value,
-                    recipient_phone: document.getElementById('recipientPhone').value,
-                    shipping_address: document.getElementById('shippingAddress').value,
-                    items: [{ product_id: parseInt(product.id), quantity: 1 }]
-                };
-
-                try {
-                    await apiFetch(`${API_BASE_URL}/orders/`, {
-                        method: 'POST',
-                        body: JSON.stringify(orderData)
-                    });
-                    
-                    // 显示模拟的物流页面
-                    mainContent.innerHTML = `<div class="card full-width"><h3>Thank You!</h3><p>Your order for ${product.name} has been placed.</p><p>Status: Sorting -> Delivering...</p><p>You can track your order in your Profile -> Purchases section (Coming Soon).</p></div>`;
-                } catch(error) {
-                    errorP.textContent = `Order failed: ${error.message}`;
-                }
-            });
-        });
-    });
 }
 
 // --- 5. HTML Template Generators ---
@@ -220,13 +181,10 @@ function getAIDiagnosisHTML() {
 }
 
 function getDiagnosisHistoryHTML(history) {
+    let content = `<h3>Diagnosis History</h3>`;
     if (!history || history.length === 0) {
-        return `
-            <div class="card full-width">
-                <h3>Diagnosis History</h3>
-                <p>No diagnosis history found. Perform a diagnosis to see your history here.</p>
-            </div>
-        `;
+        content += `<p>No diagnosis history found. Perform a diagnosis to see your history here.</p>`;
+        return `<div class="card full-width">${content}</div>`;
     }
     const historyCards = history.map(item => `
         <div class="card">
@@ -243,17 +201,70 @@ function getDiagnosisHistoryHTML(history) {
 
 function getPostsHTML(posts) {
     let html = `<h3>Community Posts</h3>`;
+
     if (currentUser.permissions.can_post) {
-        html += `<form id="createPostForm" style="margin-bottom: 20px;"><textarea name="content" placeholder="Share your thoughts..." required style="width: 100%; min-height: 80px;"></textarea><button type="submit" class="glow-button">Post</button><p class="error-message" id="post-error"></p></form>`;
-    } else {
-        html += `<p style="color: var(--text-secondary); font-style: italic;">Viewing posts is available. Upgrade to the RM15 plan to create your own posts and comment.</p>`;
+        html += `
+            <div class="card create-post-card">
+                <form id="createPostForm">
+                    <textarea name="content" placeholder="Share your thoughts, ${currentUser.email}..." required></textarea>
+                    <div class="post-form-actions">
+                        <label for="postImageUpload" class="action-btn">📷 Add Photo</label>
+                        <input type="file" name="image" id="postImageUpload" class="hidden" accept="image/*">
+                        <button type="button" id="addLocationBtn" class="action-btn">📍 Add Location</button>
+                        <input type="text" name="location" id="postLocation" placeholder="e.g., Sibu, Sarawak" class="hidden">
+                        <button type="submit" class="glow-button">Post</button>
+                    </div>
+                    <p class="error-message" id="post-error"></p>
+                </form>
+            </div>
+        `;
     }
+
     if (!posts || posts.length === 0) {
-        html += `<p>No posts yet.</p>`;
+        html += `<div class="card"><p>No posts yet. Be the first to share!</p></div>`;
     } else {
-        html += posts.map(post => `<div class="card post-card" data-post-id="${post.id}"><p><strong>${post.owner.email}</strong> <span style="color:var(--text-secondary); font-size: 0.8em;">- ${new Date(post.created_at).toLocaleString()}</span></p><p>${post.content}</p></div>`).join('');
+        html += posts.map(post => {
+            const isLiked = post.likes.some(like => like.user_id === currentUser.id);
+            const ownerName = post.owner.profile ? post.owner.profile.name : post.owner.email;
+            const avatarUrl = post.owner.profile && post.owner.profile.avatar_url 
+                            ? `${API_BASE_URL}${post.owner.profile.avatar_url}` 
+                            : `https://ui-avatars.com/api/?name=${encodeURIComponent(ownerName)}&background=random&color=fff`;
+
+            return `
+            <div class="card post-card" data-post-id="${post.id}">
+                <div class="post-header">
+                    <img src="${avatarUrl}" class="avatar">
+                    <div>
+                        <strong>${ownerName}</strong>
+                        ${post.location ? `<span class="post-location"> - at ${post.location}</span>` : ''}
+                        <div class="post-timestamp">${new Date(post.created_at).toLocaleString()}</div>
+                    </div>
+                </div>
+                <p class="post-content">${post.content}</p>
+                ${post.image_url ? `<img src="${API_BASE_URL}${post.image_url}" class="post-image">` : ''}
+                <div class="post-actions">
+                    ${currentUser.permissions.can_like_share ? `
+                        <button class="action-btn like-btn ${isLiked ? 'liked' : ''}">👍 Like (${post.likes.length})</button>
+                        <button class="action-btn share-btn">🔗 Share</button>
+                    ` : ''}
+                </div>
+                <div class="comments-section">
+                    ${post.comments.map(c => {
+                        const commenterName = c.owner.profile ? c.owner.profile.name : c.owner.email;
+                        return `<div class="comment"><p><small><strong>${commenterName}:</strong> ${c.content}</small></p></div>`;
+                    }).join('')}
+                    
+                    ${currentUser.permissions.can_comment ? `
+                        <form class="comment-form">
+                            <input type="text" name="content" placeholder="Write a comment...">
+                            <button type="submit" class="send-btn">Send</button>
+                        </form>
+                    ` : ''}
+                </div>
+            </div>
+        `}).join('');
     }
-    return `<div class="card full-width">${html}</div>`;
+    return html;
 }
 
 function getShoppingHTML(products) {
@@ -261,10 +272,28 @@ function getShoppingHTML(products) {
     if (!products || products.length === 0) {
         html += `<p>No products available right now.</p>`;
     } else {
-        const productCards = products.map(p => `<div class="card product-card"><img src="${API_BASE_URL}${p.image_url}" style="width:100%; height: 200px; object-fit: cover; border-radius:8px;"><h4>${p.name}</h4><p style="color: var(--text-secondary);">${p.description || ''}</p><p><strong>RM ${p.price.toFixed(2)}</strong></p><button class="glow-button buy-btn" data-product-id="${p.id}" data-product-name="${p.name}" data-price="${p.price}">Buy Now</button></div>`).join('');
+        const productCards = products.map(p => `
+            <div class="card product-card">
+                <img src="${API_BASE_URL}${p.image_url}" style="width:100%; height: 200px; object-fit: cover; border-radius:8px;">
+                <h4>${p.name}</h4>
+                <p style="color: var(--text-secondary);">${p.description || ''}</p>
+                <p><strong>RM ${p.price.toFixed(2)}</strong></p>
+                <button class="glow-button buy-btn" data-product-id="${p.id}" data-product-name="${p.name}" data-price="${p.price}">Buy Now</button>
+            </div>
+        `).join('');
         return `<div class="view-content">${productCards}</div>`;
     }
     return `<div class="card full-width">${html}</div>`;
+}
+
+function getChatHTML() {
+    return `
+        <div class="card full-width">
+            <h3>Chat</h3>
+            <p>Direct messaging and chat functionalities are under development. Stay tuned!</p>
+            <!-- A real chat interface would be built here -->
+        </div>
+    `;
 }
 
 function getBusinessProfileHTML(myProducts) {
@@ -274,16 +303,11 @@ function getBusinessProfileHTML(myProducts) {
     } else {
         myProductsHTML += myProducts.map(p => `
             <div class="product-list-item" style="display: flex; gap: 15px; align-items: center; margin-bottom: 10px; border-bottom: 1px solid var(--border-color); padding-bottom: 10px;">
-                
-                <!-- 关键修复：使用产品自己的 p.image_url -->
                 <img src="${API_BASE_URL}${p.image_url}" style="width: 50px; height: 50px; border-radius: 4px; object-fit: cover;">
-                
                 <span>${p.name} - RM ${p.price.toFixed(2)}</span>
-                <!-- 未来可以在这里添加 'Edit' 和 'Delete' 按钮 -->
             </div>
         `).join('');
     }
-    
     return `
         <div class="view-content">
             <div class="card"><h3>Income</h3><p>Coming Soon.</p></div>
@@ -300,88 +324,9 @@ function getBusinessProfileHTML(myProducts) {
                     <p id="product-error" class="error-message"></p>
                 </form>
             </div>
-            <div class="card full-width">
-                ${myProductsHTML}
-            </div>
+            <div class="card full-width">${myProductsHTML}</div>
         </div>
     `;
-}
-
-
-// --- Event Listeners (UPDATED) ---
-function attachAddProductListeners() {
-    const productForm = document.getElementById('addProductForm');
-    if (productForm) {
-        productForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const errorP = document.getElementById('product-error');
-            errorP.textContent = '';
-            const formData = new FormData(productForm);
-            try {
-                await apiFetch(PRODUCTS_API_URL, { // 调用 POST /products/
-                    method: 'POST',
-                    body: formData,
-                });
-                alert('Product added successfully!');
-                renderView('business-profile'); // 成功后刷新 Business Profile 视图
-            } catch (error) {
-                errorP.textContent = `Failed to add product: ${error.message}`;
-            }
-        });
-    }
-}
-
-// --- Event Listeners & Interaction Logic (UPDATED) ---
-
-function attachPostListeners() {
-    const postForm = document.getElementById('createPostForm');
-    if (postForm) {
-        postForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const errorP = document.getElementById('post-error');
-            errorP.textContent = '';
-            const contentTextArea = e.target.querySelector('textarea[name="content"]');
-            if (!contentTextArea || !contentTextArea.value.trim()) {
-                errorP.textContent = "Post content cannot be empty.";
-                return;
-            }
-            const content = contentTextArea.value;
-            try {
-                await apiFetch(POSTS_API_URL, {
-                    method: 'POST',
-                    body: JSON.stringify({ content: content })
-                });
-                renderView('posts');
-            } catch (error) {
-                errorP.textContent = `Failed to post: ${error.message}`;
-            }
-        });
-    }
-}
-
-function attachAddProductListeners() {
-    const productForm = document.getElementById('addProductForm');
-    if (productForm) {
-        productForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const errorP = document.getElementById('product-error');
-            errorP.textContent = '';
-            
-            const formData = new FormData(productForm); // 直接从表单获取所有数据
-            
-            try {
-                await apiFetch(PRODUCTS_API_URL, {
-                    method: 'POST',
-                    body: formData, // FormData不需要设置Content-Type
-                });
-                alert('Product added successfully!');
-                productForm.reset(); // 清空表单
-                // 未来可以刷新 "My Products" 列表
-            } catch (error) {
-                errorP.textContent = `Failed to add product: ${error.message}`;
-            }
-        });
-    }
 }
 
 function getProfileHTML(user) {
@@ -390,9 +335,7 @@ function getProfileHTML(user) {
     if (tier === 'tier_10') planName = 'Pro (RM10)';
     else if (tier === 'tier_15') planName = 'Pro Plus (RM15)';
     else if (tier === 'tier_20') planName = 'Business Pro (RM20)';
-    
     let planButtonsHTML = '';
-
     if (user.user_type === 'public') {
         if (tier !== 'tier_10') {
             planButtonsHTML += `<button class="glow-button plan-btn" data-plan="tier_10">Subscribe to RM10 Plan</button>`;
@@ -402,30 +345,24 @@ function getProfileHTML(user) {
             planButtonsHTML += `<button class="glow-button plan-btn" data-plan="tier_15">${buttonText}</button>`;
         }
     }
-    
-    if (user.user_type === 'business') {
-        if (tier !== 'tier_20') {
-            planButtonsHTML += `<button class="glow-button plan-btn" data-plan="tier_20">Subscribe to RM20 Business Plan</button>`;
-        }
+    if (user.user_type === 'business' && tier !== 'tier_20') {
+        planButtonsHTML += `<button class="glow-button plan-btn" data-plan="tier_20">Subscribe to RM20 Business Plan</button>`;
     }
-
-    // --- 关键修复：将降级按钮的逻辑移到外面，对所有用户类型生效 ---
     if (tier !== 'free') {
         planButtonsHTML += `<button class="plan-btn-secondary plan-btn" data-plan="free">Downgrade to Free Tier</button>`;
     }
-
     return `
-    <div class="card full-width">
-        <h3>My Profile</h3>
-        <p><strong>Email:</strong> ${user.email}</p>
-        <p><strong>User Type:</strong> ${user.user_type}</p>
-        <p><strong>Current Plan:</strong> ${planName}</p>
-        <h4 style="margin-top: 30px;">Change Plan</h4>
-        <div class="plans" style="display: flex; flex-wrap: wrap; gap: 20px; align-items: center;">
-            ${planButtonsHTML}
+        <div class="card full-width">
+            <h3>My Profile</h3>
+            <p><strong>Email:</strong> ${user.email}</p>
+            <p><strong>User Type:</strong> ${user.user_type}</p>
+            <p><strong>Current Plan:</strong> ${planName}</p>
+            <h4 style="margin-top: 30px;">Change Plan</h4>
+            <div class="plans" style="display: flex; flex-wrap: wrap; gap: 20px; align-items: center;">
+                ${planButtonsHTML}
+            </div>
+            <p id="payment-error" class="error-message"></p>
         </div>
-        <p id="payment-error" class="error-message"></p>
-    </div>
     `;
 }
 
@@ -520,27 +457,17 @@ function attachPlanButtonListeners() {
             const plan = e.target.dataset.plan;
             const errorP = document.getElementById('payment-error');
             errorP.textContent = '';
-            
             const planDisplayName = plan === 'free' ? 'Free Tier' : plan.replace('tier_', 'RM ');
             if (!confirm(`Are you sure you want to switch to the ${planDisplayName} plan?`)) {
                 return;
             }
-            
             try {
-                // 调用API更新数据库，并接收后端返回的最新、最完整的用户信息
-                const updatedUser = await apiFetch(SUBSCRIPTION_API_URL, {
+                await apiFetch(SUBSCRIPTION_API_URL, {
                     method: 'PUT',
                     body: JSON.stringify({ plan: plan }),
                 });
-                
-                // --- 关键修复：用后端返回的最新数据，立即更新前端的全局状态
-                currentUser = updatedUser;
-                
-                alert('Plan updated successfully!');
-                
-                // --- 关键修复：只重新渲染当前视图，而不是刷新整个页面或仪表盘 ---
-                renderView('profile');
-
+                alert('Plan updated successfully! The page will now reload to reflect the changes.');
+                window.location.href = `${window.location.pathname}?view=profile&t=${new Date().getTime()}`;
             } catch (error) {
                 errorP.textContent = `Failed to update plan: ${error.message}`;
             }
@@ -548,6 +475,139 @@ function attachPlanButtonListeners() {
     });
 }
 
+function attachPostListeners() {
+    const postForm = document.getElementById('createPostForm');
+    if (postForm) {
+        const addLocationBtn = document.getElementById('addLocationBtn');
+        const postLocationInput = document.getElementById('postLocation');
+        addLocationBtn.addEventListener('click', () => {
+            if (!postLocationInput.classList.contains('hidden')) {
+                postLocationInput.classList.add('hidden');
+                postLocationInput.value = '';
+                addLocationBtn.textContent = '📍 Add Location';
+                return;
+            }
+            const choice = confirm("Use current GPS location? Press 'Cancel' to enter manually.");
+            if (choice) {
+                if (!navigator.geolocation) { alert("Geolocation is not supported."); return; }
+                addLocationBtn.textContent = 'Fetching...';
+                navigator.geolocation.getCurrentPosition(
+                    (position) => {
+                        const { latitude, longitude } = position.coords;
+                        const locationName = `Lat: ${latitude.toFixed(4)}, Lon: ${longitude.toFixed(4)}`;
+                        postLocationInput.value = locationName;
+                        postLocationInput.classList.remove('hidden');
+                        addLocationBtn.textContent = '📍 Location Added';
+                    },
+                    () => {
+                        alert("Unable to retrieve location. Please enter manually.");
+                        postLocationInput.classList.remove('hidden');
+                        postLocationInput.focus();
+                        addLocationBtn.textContent = '📍 Add Location';
+                    }
+                );
+            } else {
+                postLocationInput.classList.remove('hidden');
+                postLocationInput.focus();
+            }
+        });
+        postForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const formData = new FormData(postForm);
+            try {
+                await apiFetch(POSTS_API_URL, {method: 'POST',body: formData,});
+                renderView('posts');
+            } catch (error) {
+                document.getElementById('post-error').textContent = `Failed to post: ${error.message}`;
+            }
+        });
+    }
+
+    document.querySelectorAll('.post-card').forEach(card => {
+        const postId = card.dataset.postId;
+
+        // --- 评论逻辑 ---
+        const commentForm = card.querySelector('.comment-form');
+        if (commentForm) {
+            commentForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const content = commentForm.querySelector('input[name="content"]').value;
+                if (!content.trim()) return;
+                try {
+                    await apiFetch(`${POSTS_API_URL}${postId}/comments/`, {
+                        method: 'POST',
+                        body: JSON.stringify({ content: content })
+                    });
+                    renderView('posts'); // Refresh view
+                } catch (error) {
+                    alert(`Failed to comment: ${error.message}`);
+                }
+            });
+        }
+
+        // --- 点赞逻辑 ---
+        const likeBtn = card.querySelector('.like-btn');
+        if (likeBtn) {
+            likeBtn.addEventListener('click', async () => {
+                try {
+                    await apiFetch(`${POSTS_API_URL}${postId}/like`, { method: 'POST' });
+                    renderView('posts'); // Refresh view
+                } catch (error) {
+                    alert(`Failed to like post: ${error.message}`);
+                }
+            });
+        }
+
+        // --- 分享逻辑 ---
+        const shareBtn = card.querySelector('.share-btn');
+        if (shareBtn) {
+            shareBtn.addEventListener('click', () => {
+                const postUrl = `${window.location.origin}${window.location.pathname}?view=post&id=${postId}`;
+                navigator.clipboard.writeText(postUrl)
+                    .then(() => alert('Post link copied to clipboard!'))
+                    .catch(() => alert('Failed to copy link.'));
+            });
+        }
+    });
+}
+
+function attachShoppingListeners() {
+    document.querySelectorAll('.buy-btn').forEach(button => {
+        button.addEventListener('click', async (e) => {
+            const productId = e.target.dataset.productId;
+            if (confirm("Simulate purchase?")) {
+                try {
+                    const result = await apiFetch(`${PRODUCTS_API_URL}/${productId}/buy`, { method: 'POST' });
+                    alert(result.message);
+                } catch (error) {
+                    alert(`Purchase failed: ${error.message}`);
+                }
+            }
+        });
+    });
+}
+
+function attachAddProductListeners() {
+    const productForm = document.getElementById('addProductForm');
+    if (productForm) {
+        productForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const errorP = document.getElementById('product-error');
+            errorP.textContent = '';
+            const formData = new FormData(productForm);
+            try {
+                await apiFetch(PRODUCTS_API_URL, {
+                    method: 'POST',
+                    body: formData,
+                });
+                alert('Product added successfully!');
+                renderView('business-profile');
+            } catch (error) {
+                errorP.textContent = `Failed to add product: ${error.message}`;
+            }
+        });
+    }
+}
 
 function logout() {
     localStorage.removeItem('accessToken');

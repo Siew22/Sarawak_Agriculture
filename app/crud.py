@@ -4,7 +4,7 @@
 import random
 import string
 from datetime import datetime, timedelta
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from typing import List, Optional
 
 # --- 核心模块导入 (已修正) ---
@@ -17,7 +17,6 @@ from app.schemas.post import PostCreate
 from app.auth import security
 from app.schemas.profile import ProfileUpdate
 from app.schemas import order as order_schemas
-
 
 # ====================================================================
 #  User Related CRUD Operations
@@ -166,15 +165,24 @@ def create_user_product(db: Session, product: ProductCreate, user_id: int, image
 def get_products(db: Session, skip: int = 0, limit: int = 100) -> List[database.Product]:
     return db.query(database.Product).filter(database.Product.is_active == True).offset(skip).limit(limit).all()
 
-def create_post(db: Session, post: PostCreate, user_id: int) -> database.Post:
-    db_post = database.Post(content=post.content, owner_id=user_id)
+def create_post(db: Session, content: str, user_id: int, image_url: Optional[str] = None, location: Optional[str] = None) -> database.Post:
+    db_post = database.Post(
+        content=content, 
+        owner_id=user_id,
+        image_url=image_url,
+        location=location
+    )
     db.add(db_post)
     db.commit()
     db.refresh(db_post)
     return db_post
 
 def get_posts(db: Session, skip: int = 0, limit: int = 100) -> List[database.Post]:
-    return db.query(database.Post).order_by(database.Post.created_at.desc()).offset(skip).limit(limit).all()
+    return db.query(database.Post).options(
+        joinedload(database.Post.owner).joinedload(database.User.profile),
+        joinedload(database.Post.comments).joinedload(database.Comment.owner).joinedload(database.User.profile),
+        joinedload(database.Post.likes)
+    ).order_by(database.Post.created_at.desc()).offset(skip).limit(limit).all()
 
 # ====================================================================
 #  Post CRUD Operations
@@ -189,12 +197,6 @@ def create_post(db: Session, post: PostCreate, user_id: int) -> database.Post:
     db.commit()
     db.refresh(db_post)
     return db_post
-
-def get_posts(db: Session, skip: int = 0, limit: int = 100) -> List[database.Post]:
-    """
-    Retrieves a list of all posts, newest first.
-    """
-    return db.query(database.Post).order_by(database.Post.created_at.desc()).offset(skip).limit(limit).all()
 
 def update_user_profile(db: Session, user: database.User, profile_update: ProfileUpdate):
     profile = user.profile

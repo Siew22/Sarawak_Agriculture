@@ -59,6 +59,7 @@ class Profile(Base):
     company_type = Column(String(100), nullable=True)
     halal_cert_url = Column(String(512), nullable=True)
     business_license_url = Column(String(512), nullable=True)
+    avatar_url = Column(String(512), nullable=True)
     
     owner = relationship("User", back_populates="profile")
 
@@ -149,11 +150,27 @@ class Post(Base):
     __tablename__ = "posts"
     id = Column(Integer, primary_key=True, index=True)
     content = Column(Text, nullable=False)
+    
+    # --- 新增字段 ---
+    image_url = Column(String(512), nullable=True) # 存储上传的图片URL
+    location = Column(String(255), nullable=True)  # 存储用户输入或GPS获取的位置
+    
     owner_id = Column(Integer, ForeignKey("users.id"))
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
     
     owner = relationship("User")
     comments = relationship("Comment", back_populates="post")
+    # 接下来还可以添加 likes 关系
+    likes = relationship("Like", back_populates="post")
+
+# --- (新) 点赞模型 ---
+class Like(Base):
+    __tablename__ = "likes"
+    user_id = Column(Integer, ForeignKey("users.id"), primary_key=True)
+    post_id = Column(Integer, ForeignKey("posts.id"), primary_key=True)
+
+    user = relationship("User")
+    post = relationship("Post", back_populates="likes")
 
 # --- (新) 评论模型 ---
 class Comment(Base):
