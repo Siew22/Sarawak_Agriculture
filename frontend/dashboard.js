@@ -7,8 +7,8 @@ const API_BASE_URL = 'http://127.0.0.1:8000';
 const USERS_ME_API_URL = `${API_BASE_URL}/users/me`;
 const DIAGNOSE_API_URL = `${API_BASE_URL}/diagnose`;
 const DIAGNOSES_HISTORY_API_URL = `${API_BASE_URL}/diagnoses/me`;
-const POSTS_API_URL = `${API_BASE_URL}/posts/`;
-const PRODUCTS_API_URL = `${API_BASE_URL}/products/`;
+const POSTS_API_URL = `${API_BASE_URL}/posts`;
+const PRODUCTS_API_URL = `${API_BASE_URL}/products`;
 const SUBSCRIPTION_API_URL = `${API_BASE_URL}/users/me/subscription`;
 
 const appContainer = document.getElementById('app-container');
@@ -69,18 +69,14 @@ function renderDashboard() {
     dashboardContainer.className = 'dashboard-container';
     
     const header = document.createElement('header');
-    const { permissions, user_type, email, subscription_tier } = currentUser;
+    const { permissions, user_type, email } = currentUser;
     
-    // --- 关键修复：修正 Posts 链接的禁用逻辑 ---
-    // 只有 Free Tier 用户才可能无法访问 Posts
-    // RM10 和 RM15/20 用户都应该可以访问
-    const isPostsDisabled = (subscription_tier === 'free');
-
+    // --- 关键修复：所有禁用逻辑都严格依赖于后端返回的 permissions 对象 ---
     let navLinks = `
         <a href="#" class="nav-link" data-view="profile">Profile</a>
         <a href="#" class="nav-link active-link" data-view="ai-diagnosis">AI Diagnosis</a>
         <a href="#" class="nav-link" data-view="diagnosis-history">History</a>
-        <a href="#" class="nav-link ${isPostsDisabled ? 'disabled-link' : ''}" data-view="posts">Posts</a>
+        <a href="#" class="nav-link ${!permissions.can_like_share ? 'disabled-link' : ''}" data-view="posts">Posts</a>
         <a href="#" class="nav-link ${!permissions.can_chat ? 'disabled-link' : ''}" data-view="chat">Chat</a>
         <a href="#" class="nav-link ${!permissions.can_shop ? 'disabled-link' : ''}" data-view="shopping">Shopping</a>
     `;
@@ -130,11 +126,17 @@ async function renderView(viewId) {
             const history = await apiFetch(DIAGNOSES_HISTORY_API_URL);
             mainContent.innerHTML = getDiagnosisHistoryHTML(history);
         } else if (viewId === 'posts') {
-            mainContent.innerHTML = getPostsHTML([]);
+            const posts = await apiFetch(POSTS_API_URL);
+            mainContent.innerHTML = getPostsHTML(posts);
+            attachPostListeners();
         } else if (viewId === 'shopping') {
-            mainContent.innerHTML = getShoppingHTML([]);
+            const products = await apiFetch(PRODUCTS_API_URL);
+            mainContent.innerHTML = getShoppingHTML(products);
+            attachShoppingListeners();
         } else if (viewId === 'business-profile' && currentUser.user_type === 'business') {
-            mainContent.innerHTML = getBusinessProfileHTML();
+            const myProducts = await apiFetch(`${PRODUCTS_API_URL}/me`);
+            mainContent.innerHTML = getBusinessProfileHTML(myProducts);
+            attachAddProductListeners();
         } else if (viewId === 'profile') {
             const latestUser = await apiFetch(USERS_ME_API_URL);
             currentUser = latestUser;
@@ -147,27 +149,6 @@ async function renderView(viewId) {
     } catch (error) {
         mainContent.innerHTML = `<div class="card full-width error-message"><p>Failed to load view: ${error.message}</p></div>`;
     }
-}
-
-// --- HTML Template Generators (UPDATED) ---
-
-function getShoppingHTML(products) {
-    let html = `<h3>Marketplace</h3>`;
-    if (!products || products.length === 0) {
-        html += `<p>No products available right now.</p>`;
-    } else {
-        const productCards = products.map(p => `
-            <div class="card product-card">
-                <img src="${API_BASE_URL}${p.image_url || '/static/placeholder.jpg'}" style="width:100%; border-radius:8px; object-fit: cover; height: 200px;">
-                <h4>${p.name}</h4>
-                <p style="color: var(--text-secondary);">${p.description || 'No description available.'}</p>
-                <p><strong>RM ${p.price.toFixed(2)}</strong></p>
-                <button class="glow-button buy-btn" data-product-id="${p.id}" data-product-name="${p.name}" data-price="${p.price}">Buy Now</button>
-            </div>
-        `).join('');
-        html = `<div class="view-content">${productCards}</div>`;
-    }
-    return `<div class="card full-width">${html}</div>`;
 }
 
 function getCheckoutHTML(product) {
@@ -294,26 +275,137 @@ function getPostsHTML(posts) {
 }
 
 function getShoppingHTML(products) {
-    return `<div class="card full-width"><h3>Marketplace</h3><p>Coming Soon.</p></div>`;
+    let html = `<h3>Marketplace</h3>`;
+    if (!products || products.length === 0) {
+        html += `<p>No products available right now.</p>`;
+    } else {
+        const productCards = products.map(p => `
+            <div class="card product-card">
+                
+                <!-- 关键修复：使用产品自己的 p.image_url -->
+                <img src="${API_BASE_URL}${p.image_url}" style="width:100%; height: 200px; object-fit: cover; border-radius:8px;">
+                
+                <h4>${p.name}</h4>
+                <p style="color: var(--text-secondary);">${p.description || ''}</p>
+                <p><strong>RM ${p.price.toFixed(2)}</strong></p>
+                <button class="glow-button buy-btn" data-product-id="${p.id}" data-product-name="${p.name}" data-price="${p.price}">Buy Now</button>
+            </div>
+        `).join('');
+        // Shopping视图应该使用 view-content 来获得正确的网格布局
+        return `<div class="view-content">${productCards}</div>`; 
+    }
+    return `<div class="card full-width">${html}</div>`;
 }
 
-function getBusinessProfileHTML() {
+function getBusinessProfileHTML(myProducts) {
+    let myProductsHTML = `<h4>My Products</h4>`;
+    if (!myProducts || myProducts.length === 0) {
+        myProductsHTML += `<p>You haven't added any products yet.</p>`;
+    } else {
+        myProductsHTML += myProducts.map(p => `
+            <div class="product-list-item" style="display: flex; gap: 15px; align-items: center; margin-bottom: 10px; border-bottom: 1px solid var(--border-color); padding-bottom: 10px;">
+                
+                <!-- 关键修复：使用产品自己的 p.image_url -->
+                <img src="${API_BASE_URL}${p.image_url}" style="width: 50px; height: 50px; border-radius: 4px; object-fit: cover;">
+                
+                <span>${p.name} - RM ${p.price.toFixed(2)}</span>
+                <!-- 未来可以在这里添加 'Edit' 和 'Delete' 按钮 -->
+            </div>
+        `).join('');
+    }
+    
     return `
         <div class="view-content">
+            <div class="card"><h3>Income</h3><p>Coming Soon.</p></div>
+            <div class="card"><h3>Product Sell Quantity</h3><p>Coming Soon.</p></div>
             <div class="card">
-                <h3>Income</h3>
-                <p>Coming Soon.</p>
+                <h3>Add Product to Sell</h3>
+                <form id="addProductForm">
+                    <input type="text" name="name" placeholder="Product Name" required>
+                    <textarea name="description" placeholder="Description" style="min-height: 80px; resize: vertical;"></textarea>
+                    <input type="text" name="location" placeholder="Location">
+                    <input type="number" name="price" placeholder="Price (RM)" step="0.01" required>
+                    <label class="file-input-label">Product Picture <input type="file" name="image" class="file-input" required></label>
+                    <button type="submit" class="glow-button">Add Product</button>
+                    <p id="product-error" class="error-message"></p>
+                </form>
             </div>
-            <div class="card">
-                <h3>Product Sell Quantity</h3>
-                <p>Coming Soon.</p>
-            </div>
-            <div class="card">
-                <h3>Add Product</h3>
-                <p>Coming Soon.</p>
+            <div class="card full-width">
+                ${myProductsHTML}
             </div>
         </div>
     `;
+}
+
+
+// --- Event Listeners (UPDATED) ---
+function attachAddProductListeners() {
+    const productForm = document.getElementById('addProductForm');
+    if (productForm) {
+        productForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const errorP = document.getElementById('product-error');
+            errorP.textContent = '';
+            const formData = new FormData(productForm);
+            try {
+                await apiFetch(PRODUCTS_API_URL, { // 调用 POST /products/
+                    method: 'POST',
+                    body: formData,
+                });
+                alert('Product added successfully!');
+                renderView('business-profile'); // 成功后刷新 Business Profile 视图
+            } catch (error) {
+                errorP.textContent = `Failed to add product: ${error.message}`;
+            }
+        });
+    }
+}
+
+// --- Event Listeners & Interaction Logic (UPDATED) ---
+
+function attachPostListeners() {
+    const postForm = document.getElementById('createPostForm');
+    if (postForm) {
+        postForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const content = document.getElementById('postContent').value;
+            if (!content.trim()) return;
+            try {
+                await apiFetch(POSTS_API_URL, {
+                    method: 'POST',
+                    body: JSON.stringify({ content: content })
+                });
+                renderView('posts'); // 成功后刷新帖子视图
+            } catch (error) {
+                alert(`Failed to post: ${error.message}`);
+            }
+        });
+    }
+}
+
+function attachAddProductListeners() {
+    const productForm = document.getElementById('addProductForm');
+    if (productForm) {
+        productForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const errorP = document.getElementById('product-error');
+            errorP.textContent = '';
+            
+            const formData = new FormData(productForm); // 直接从表单获取所有数据
+            
+            try {
+                await apiFetch(PRODUCTS_API_URL, {
+                    method: 'POST',
+                    body: formData, // FormData不需要设置Content-Type
+                });
+                alert('Product added successfully!');
+                productForm.reset(); // 清空表单
+                // 未来可以刷新 "My Products" 列表
+            } catch (error) {
+                errorP.textContent = `Failed to add product: ${error.message}`;
+            }
+        });
+    }
 }
 
 function getProfileHTML(user) {
@@ -322,7 +414,9 @@ function getProfileHTML(user) {
     if (tier === 'tier_10') planName = 'Pro (RM10)';
     else if (tier === 'tier_15') planName = 'Pro Plus (RM15)';
     else if (tier === 'tier_20') planName = 'Business Pro (RM20)';
+    
     let planButtonsHTML = '';
+
     if (user.user_type === 'public') {
         if (tier !== 'tier_10') {
             planButtonsHTML += `<button class="glow-button plan-btn" data-plan="tier_10">Subscribe to RM10 Plan</button>`;
@@ -332,24 +426,30 @@ function getProfileHTML(user) {
             planButtonsHTML += `<button class="glow-button plan-btn" data-plan="tier_15">${buttonText}</button>`;
         }
     }
-    if (user.user_type === 'business' && tier !== 'tier_20') {
-        planButtonsHTML += `<button class="glow-button plan-btn" data-plan="tier_20">Subscribe to RM20 Business Plan</button>`;
+    
+    if (user.user_type === 'business') {
+        if (tier !== 'tier_20') {
+            planButtonsHTML += `<button class="glow-button plan-btn" data-plan="tier_20">Subscribe to RM20 Business Plan</button>`;
+        }
     }
+
+    // --- 关键修复：将降级按钮的逻辑移到外面，对所有用户类型生效 ---
     if (tier !== 'free') {
         planButtonsHTML += `<button class="plan-btn-secondary plan-btn" data-plan="free">Downgrade to Free Tier</button>`;
     }
+
     return `
-        <div class="card full-width">
-            <h3>My Profile</h3>
-            <p><strong>Email:</strong> ${user.email}</p>
-            <p><strong>User Type:</strong> ${user.user_type}</p>
-            <p><strong>Current Plan:</strong> ${planName}</p>
-            <h4 style="margin-top: 30px;">Change Plan</h4>
-            <div class="plans" style="display: flex; flex-wrap: wrap; gap: 20px; align-items: center;">
-                ${planButtonsHTML}
-            </div>
-            <p id="payment-error" class="error-message"></p>
+    <div class="card full-width">
+        <h3>My Profile</h3>
+        <p><strong>Email:</strong> ${user.email}</p>
+        <p><strong>User Type:</strong> ${user.user_type}</p>
+        <p><strong>Current Plan:</strong> ${planName}</p>
+        <h4 style="margin-top: 30px;">Change Plan</h4>
+        <div class="plans" style="display: flex; flex-wrap: wrap; gap: 20px; align-items: center;">
+            ${planButtonsHTML}
         </div>
+        <p id="payment-error" class="error-message"></p>
+    </div>
     `;
 }
 
@@ -451,14 +551,18 @@ function attachPlanButtonListeners() {
             }
             
             try {
+                // 调用API更新数据库，并接收后端返回的最新、最完整的用户信息
                 const updatedUser = await apiFetch(SUBSCRIPTION_API_URL, {
                     method: 'PUT',
                     body: JSON.stringify({ plan: plan }),
                 });
                 
+                // --- 关键修复：用后端返回的最新数据，立即更新前端的全局状态
                 currentUser = updatedUser;
+                
                 alert('Plan updated successfully!');
                 
+                // --- 关键修复：只重新渲染当前视图，而不是刷新整个页面或仪表盘 ---
                 renderView('profile');
 
             } catch (error) {
@@ -467,6 +571,7 @@ function attachPlanButtonListeners() {
         });
     });
 }
+
 
 function logout() {
     localStorage.removeItem('accessToken');

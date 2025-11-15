@@ -111,7 +111,7 @@ def update_subscription(
     Updates the current user's subscription tier.
     """
     new_plan = plan_update.plan
-    if new_plan not in ['free', 'tier_10', 'tier_15']:
+    if new_plan not in ['free', 'tier_10', 'tier_15', 'tier_20']:
         raise HTTPException(status_code=400, detail="Invalid plan selected.")
         
     current_user.subscription_tier = new_plan

@@ -156,21 +156,25 @@ def get_diagnosis_history_by_user(db: Session, user_id: int) -> List[database.Di
 #  Product CRUD Operations
 # ====================================================================
 
-def create_user_product(db: Session, product: ProductCreate, user_id: int) -> database.Product:
-    """
-    Creates a new product for a business user.
-    """
-    db_product = database.Product(**product.dict(), seller_id=user_id)
+def create_user_product(db: Session, product: ProductCreate, user_id: int, image_url: str) -> database.Product:
+    db_product = database.Product(**product.dict(), seller_id=user_id, image_url=image_url)
     db.add(db_product)
     db.commit()
     db.refresh(db_product)
     return db_product
 
 def get_products(db: Session, skip: int = 0, limit: int = 100) -> List[database.Product]:
-    """
-    Retrieves a list of all active products for the marketplace.
-    """
     return db.query(database.Product).filter(database.Product.is_active == True).offset(skip).limit(limit).all()
+
+def create_post(db: Session, post: PostCreate, user_id: int) -> database.Post:
+    db_post = database.Post(content=post.content, owner_id=user_id)
+    db.add(db_post)
+    db.commit()
+    db.refresh(db_post)
+    return db_post
+
+def get_posts(db: Session, skip: int = 0, limit: int = 100) -> List[database.Post]:
+    return db.query(database.Post).order_by(database.Post.created_at.desc()).offset(skip).limit(limit).all()
 
 # ====================================================================
 #  Post CRUD Operations
@@ -251,3 +255,7 @@ def create_order(db: Session, order_data: order_schemas.OrderCreate, buyer_id: i
 
 def get_orders_by_user(db: Session, user_id: int) -> List[database.Order]:
     return db.query(database.Order).filter(database.Order.buyer_id == user_id).order_by(database.Order.created_at.desc()).all()
+
+# --- (新) 根据卖家ID获取产品 ---
+def get_products_by_seller(db: Session, seller_id: int) -> List[database.Product]:
+    return db.query(database.Product).filter(database.Product.seller_id == seller_id).order_by(database.Product.id.desc()).all()

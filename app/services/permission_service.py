@@ -7,14 +7,19 @@ from app import database, crud
 PLAN_CONFIG = {
     'free': {
         'public': {'api_limit': 10, 'limit_duration_hours': 1, 'can_chat': False, 'can_post': False, 'can_shop': False, 'can_comment': False, 'can_like_share': False},
+        # 关键修复：Business Free Tier 应该可以购物
         'business': {'api_limit': 10, 'limit_duration_hours': 1, 'can_chat': False, 'can_post': False, 'can_shop': True, 'can_comment': False, 'can_like_share': False}
     },
     'tier_10': {
         'public': {'api_limit': 50, 'limit_duration_hours': 8, 'can_chat': True, 'can_post': False, 'can_shop': True, 'can_comment': False, 'can_like_share': True},
         'business': None 
     },
-    'tier_15': { # <--- 新增 RM15 套餐
+    'tier_15': {
         'public': {'api_limit': 100, 'limit_duration_hours': 6, 'can_chat': True, 'can_post': True, 'can_shop': True, 'can_comment': True, 'can_like_share': True},
+    },
+    'tier_20': {
+        # 关键修复：Business RM20 套餐应该拥有所有权限
+        'business': {'api_limit': 100, 'limit_duration_hours': 6, 'can_chat': True, 'can_post': True, 'can_shop': True, 'can_comment': True, 'can_like_share': True}
     }
 }
 

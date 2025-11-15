@@ -87,7 +87,13 @@ h1, h2 {
     font-weight: 600;
 }
 
-input, select {
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="tel"],
+input[type="number"],
+select,
+textarea {
     width: 100%;
     padding: 12px 15px;
     margin-bottom: 15px;
@@ -97,7 +103,10 @@ input, select {
     color: var(--text-color);
     box-sizing: border-box;
     font-size: 1em;
-    font-family: inherit;
+    font-family: inherit; /* 确保字体一致 */
+    -webkit-appearance: none; /* 重置移动端浏览器的一些默认样式 */
+    -moz-appearance: none;
+    appearance: none;
 }
 
 input::placeholder {

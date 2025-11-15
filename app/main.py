@@ -74,6 +74,9 @@ app.mount("/static", StaticFiles(directory=static_path), name="static")
 app.include_router(users.router)
 app.include_router(token.router)
 app.include_router(diagnoses.router)
+app.include_router(products.router) # <--- 添加这一行
+app.include_router(posts.router)     # <--- 确保这一行也存在
+app.include_router(orders.router)    # <--- 确保这一行也存在
 
 # --- Part 4: API 生命周期 ---
 @app.on_event("startup")

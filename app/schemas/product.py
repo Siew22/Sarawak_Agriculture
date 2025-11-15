@@ -1,14 +1,18 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import Optional
 
 class ProductBase(BaseModel):
+    name: str = Field(..., max_length=255)
+    description: Optional[str] = None
+    price: float = Field(..., gt=0)
+    location: Optional[str] = None
+
+# app/schemas/product.py
+class ProductCreate(BaseModel):
     name: str
     description: Optional[str] = None
     price: float
     location: Optional[str] = None
-
-class ProductCreate(ProductBase):
-    pass
 
 class Product(ProductBase):
     id: int
