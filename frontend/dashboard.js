@@ -1,5 +1,5 @@
 // ====================================================================
-//  frontend/dashboard.js (Final & Complete Version - Professionally Formatted)
+//  frontend/dashboard.js (Final & Complete Version - Formatted with All Fixes)
 // ====================================================================
 
 // --- 1. Configuration & Global State ---
@@ -141,7 +141,7 @@ async function renderView(viewId) {
             currentUser = latestUser;
             mainContent.innerHTML = getProfileHTML(currentUser);
             attachPlanButtonListeners();
-        } else if (viewId === 'chat'){ // <--- 关键修复：添加此逻辑块
+        } else if (viewId === 'chat'){
              mainContent.innerHTML = getChatHTML();
         } else {
             const capitalizedViewId = viewId.charAt(0).toUpperCase() + viewId.slice(1);
@@ -181,10 +181,13 @@ function getAIDiagnosisHTML() {
 }
 
 function getDiagnosisHistoryHTML(history) {
-    let content = `<h3>Diagnosis History</h3>`;
     if (!history || history.length === 0) {
-        content += `<p>No diagnosis history found. Perform a diagnosis to see your history here.</p>`;
-        return `<div class="card full-width">${content}</div>`;
+        return `
+            <div class="card full-width">
+                <h3>Diagnosis History</h3>
+                <p>No diagnosis history found. Perform a diagnosis to see your history here.</p>
+            </div>
+        `;
     }
     const historyCards = history.map(item => `
         <div class="card">
@@ -286,16 +289,6 @@ function getShoppingHTML(products) {
     return `<div class="card full-width">${html}</div>`;
 }
 
-function getChatHTML() {
-    return `
-        <div class="card full-width">
-            <h3>Chat</h3>
-            <p>Direct messaging and chat functionalities are under development. Stay tuned!</p>
-            <!-- A real chat interface would be built here -->
-        </div>
-    `;
-}
-
 function getBusinessProfileHTML(myProducts) {
     let myProductsHTML = `<h4>My Products</h4>`;
     if (!myProducts || myProducts.length === 0) {
@@ -362,6 +355,15 @@ function getProfileHTML(user) {
                 ${planButtonsHTML}
             </div>
             <p id="payment-error" class="error-message"></p>
+        </div>
+    `;
+}
+
+function getChatHTML() {
+    return `
+        <div class="card full-width">
+            <h3>Chat</h3>
+            <p>Direct messaging is under development.</p>
         </div>
     `;
 }
@@ -457,17 +459,23 @@ function attachPlanButtonListeners() {
             const plan = e.target.dataset.plan;
             const errorP = document.getElementById('payment-error');
             errorP.textContent = '';
+            
             const planDisplayName = plan === 'free' ? 'Free Tier' : plan.replace('tier_', 'RM ');
             if (!confirm(`Are you sure you want to switch to the ${planDisplayName} plan?`)) {
                 return;
             }
+            
             try {
-                await apiFetch(SUBSCRIPTION_API_URL, {
+                const updatedUser = await apiFetch(SUBSCRIPTION_API_URL, {
                     method: 'PUT',
                     body: JSON.stringify({ plan: plan }),
                 });
-                alert('Plan updated successfully! The page will now reload to reflect the changes.');
-                window.location.href = `${window.location.pathname}?view=profile&t=${new Date().getTime()}`;
+                
+                currentUser = updatedUser;
+                alert('Plan updated successfully!');
+                
+                renderView('profile');
+
             } catch (error) {
                 errorP.textContent = `Failed to update plan: ${error.message}`;
             }
@@ -511,11 +519,12 @@ function attachPostListeners() {
                 postLocationInput.focus();
             }
         });
+
         postForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             const formData = new FormData(postForm);
             try {
-                await apiFetch(POSTS_API_URL, {method: 'POST',body: formData,});
+                await apiFetch(POSTS_API_URL, { method: 'POST', body: formData });
                 renderView('posts');
             } catch (error) {
                 document.getElementById('post-error').textContent = `Failed to post: ${error.message}`;
@@ -525,8 +534,6 @@ function attachPostListeners() {
 
     document.querySelectorAll('.post-card').forEach(card => {
         const postId = card.dataset.postId;
-
-        // --- 评论逻辑 ---
         const commentForm = card.querySelector('.comment-form');
         if (commentForm) {
             commentForm.addEventListener('submit', async (e) => {
@@ -538,27 +545,23 @@ function attachPostListeners() {
                         method: 'POST',
                         body: JSON.stringify({ content: content })
                     });
-                    renderView('posts'); // Refresh view
+                    renderView('posts');
                 } catch (error) {
                     alert(`Failed to comment: ${error.message}`);
                 }
             });
         }
-
-        // --- 点赞逻辑 ---
         const likeBtn = card.querySelector('.like-btn');
         if (likeBtn) {
             likeBtn.addEventListener('click', async () => {
                 try {
                     await apiFetch(`${POSTS_API_URL}${postId}/like`, { method: 'POST' });
-                    renderView('posts'); // Refresh view
+                    renderView('posts');
                 } catch (error) {
                     alert(`Failed to like post: ${error.message}`);
                 }
             });
         }
-
-        // --- 分享逻辑 ---
         const shareBtn = card.querySelector('.share-btn');
         if (shareBtn) {
             shareBtn.addEventListener('click', () => {
@@ -568,6 +571,13 @@ function attachPostListeners() {
                     .catch(() => alert('Failed to copy link.'));
             });
         }
+        card.querySelectorAll('.user-profile-link').forEach(link => {
+            link.addEventListener('click', (e) => {
+                e.preventDefault();
+                const userId = e.currentTarget.dataset.userId;
+                renderView('user-profile', userId);
+            });
+        });
     });
 }
 

@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 
 # --- 核心模块导入 ---
 from app import crud, database
@@ -15,6 +15,27 @@ router = APIRouter(
     prefix="/users",
     tags=["Users"],
 )
+
+class PublicProfile(BaseModel):
+    id: int
+    name: str
+    avatar_url: Optional[str] = None
+    user_type: str
+    
+    class Config:
+        from_attributes = True
+
+@router.get("/{user_id}/profile", response_model=PublicProfile)
+def get_public_user_profile(user_id: int, db: Session = Depends(database.get_db)):
+    user = db.query(database.User).filter(database.User.id == user_id).first()
+    if not user or not user.profile:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Pydantic 会自动从 profile 中提取 name 和 avatar_url
+    response_data = user.profile
+    response_data.id = user.id
+    response_data.user_type = user.user_type
+    return response_data
 
 @router.post("/", response_model=Dict[str, Any], status_code=status.HTTP_201_CREATED)
 def create_user_signup(user: auth_schemas.UserCreate, db: Session = Depends(get_db)):
