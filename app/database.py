@@ -1,19 +1,16 @@
 # ====================================================================
-#  Part 1: Imports - 导入所有需要的工具
+#  app/database.py (Final & Complete Version)
 # ====================================================================
-from sqlalchemy import create_engine, Column, Integer, String, Boolean, Float, DateTime, Text, ForeignKey
+from sqlalchemy import (create_engine, Column, Integer, String, Boolean, 
+                        Float, DateTime, Text, ForeignKey)
 from sqlalchemy.orm import sessionmaker, relationship
 from sqlalchemy.ext.declarative import declarative_base
 from urllib.parse import quote_plus
 import datetime
 
-from .config import settings
+from app.config import settings
 
-# ====================================================================
-#  Part 2: Database Connection - 数据库连接设置
-# ====================================================================
-
-# 手动构建并编码数据库URL，以处理密码中的特殊字符
+# --- Database Connection Setup ---
 encoded_password = quote_plus(settings.DB_PASSWORD)
 SQLALCHEMY_DATABASE_URL = (
     f"mysql+pymysql://{settings.DB_USER}:{encoded_password}@"
@@ -24,44 +21,30 @@ engine = create_engine(SQLALCHEMY_DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
-# ====================================================================
-#  Part 3: ORM Models - 所有数据库表的定义
-#  (之前在 sql_models.py 中的内容)
-# ====================================================================
+# --- ORM Models ---
 
-# --- 用户模型 (已升级) ---
 class User(Base):
     __tablename__ = "users"
 
     id = Column(Integer, primary_key=True, index=True)
     email = Column(String(255), unique=True, index=True, nullable=False)
     hashed_password = Column(String(255), nullable=False)
-    user_type = Column(String(50), nullable=False, default='public')
+    user_type = Column(String(50), nullable=False, default='public') # 'public' or 'business'
     
-    # --- 新增的验证字段 ---
-    is_active = Column(Boolean, default=False) # 默认未激活，直到邮箱验证
+    is_active = Column(Boolean, default=False)
     is_email_verified = Column(Boolean, default=False)
+    
+    # Subscription tier field
+    subscription_tier = Column(String(50), default='free', nullable=False) # 'free', 'tier_10', 'tier_20'
     
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
     
-    # 关系保持不变
+    # Relationships
     profile = relationship("Profile", back_populates="owner", uselist=False)
     diagnoses = relationship("DiagnosisHistory", back_populates="user")
     products = relationship("Product", back_populates="seller")
+    api_usage = relationship("ApiUsageLog", back_populates="user")
 
-# --- (新) 验证码模型 ---
-class VerificationCode(Base):
-    __tablename__ = "verification_codes"
-    
-    id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id"))
-    code = Column(String(10), index=True, nullable=False)
-    purpose = Column(String(50), nullable=False) # e.g., 'signup_verification'
-    expires_at = Column(DateTime, nullable=False)
-    is_used = Column(Boolean, default=False)
-    created_at = Column(DateTime, default=datetime.datetime.utcnow)
-
-# --- 用户详细信息模型 ---
 class Profile(Base):
     __tablename__ = "profiles"
 
@@ -79,7 +62,6 @@ class Profile(Base):
     
     owner = relationship("User", back_populates="profile")
 
-# --- AI诊断历史模型 ---
 class DiagnosisHistory(Base):
     __tablename__ = "diagnosis_history"
 
@@ -96,7 +78,6 @@ class DiagnosisHistory(Base):
 
     user = relationship("User", back_populates="diagnoses")
 
-# --- 商品模型 (电商功能) ---
 class Product(Base):
     __tablename__ = "products"
 
@@ -113,9 +94,51 @@ class Product(Base):
     
     seller = relationship("User", back_populates="products")
 
-# ====================================================================
-#  Part 4: Dependency - 数据库会话依赖注入
-# ====================================================================
+class VerificationCode(Base):
+    __tablename__ = "verification_codes"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"))
+    code = Column(String(10), index=True, nullable=False)
+    purpose = Column(String(50), nullable=False)
+    expires_at = Column(DateTime, nullable=False)
+    is_used = Column(Boolean, default=False)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+
+class ApiUsageLog(Base):
+    __tablename__ = "api_usage_logs"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"))
+    endpoint = Column(String(255), nullable=False)
+    timestamp = Column(DateTime, default=datetime.datetime.utcnow)
+    
+    user = relationship("User", back_populates="api_usage")
+
+# --- (新) 社交帖子模型 ---
+class Post(Base):
+    __tablename__ = "posts"
+    id = Column(Integer, primary_key=True, index=True)
+    content = Column(Text, nullable=False)
+    owner_id = Column(Integer, ForeignKey("users.id"))
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+    
+    owner = relationship("User")
+    comments = relationship("Comment", back_populates="post")
+
+# --- (新) 评论模型 ---
+class Comment(Base):
+    __tablename__ = "comments"
+    id = Column(Integer, primary_key=True, index=True)
+    content = Column(Text, nullable=False)
+    owner_id = Column(Integer, ForeignKey("users.id"))
+    post_id = Column(Integer, ForeignKey("posts.id"))
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+
+    owner = relationship("User")
+    post = relationship("Post", back_populates="comments")
+
+# --- Dependency ---
 def get_db():
     db = SessionLocal()
     try:

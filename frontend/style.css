@@ -294,3 +294,20 @@ main {
 .report-section { margin-bottom: 25px; }
 #reportSuggestion { white-space: pre-wrap; background: rgba(0,0,0,0.2); padding: 15px; border-radius: 8px; line-height: 1.7; }
 #xaiImage { width: 100%; border-radius: 8px; margin-top: 10px; }
+
+.plan-btn-secondary {
+    padding: 12px;
+    margin-top: 10px;
+    border: 1px solid var(--primary-glow);
+    border-radius: 8px;
+    background: transparent;
+    color: var(--primary-glow);
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background-color 0.2s, color 0.2s;
+}
+.plan-btn-secondary:hover {
+    background-color: var(--primary-glow);
+    color: white;
+}

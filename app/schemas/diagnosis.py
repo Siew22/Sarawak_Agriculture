@@ -1,5 +1,6 @@
 from pydantic import BaseModel, Field
 from typing import Optional
+from datetime import datetime
 
 class PredictionResult(BaseModel):
     disease: str = Field(..., description="预测出的病害名称")
@@ -16,3 +17,17 @@ class FullDiagnosisReport(BaseModel):
     management_suggestion: str = Field(..., description="管理和防治建议")
     # --- ↓↓↓ 新增字段 ↓↓↓ ---
     xai_image_url: Optional[str] = Field(None, description="指向XAI解释图的URL")
+
+class DiagnosisHistory(BaseModel):
+    id: int
+    user_id: int
+    image_url: str
+    disease_name: str
+    confidence: float
+    risk_level: str
+    report_title: str
+    report_summary: str
+    timestamp: datetime
+
+    class Config:
+        from_attributes = True

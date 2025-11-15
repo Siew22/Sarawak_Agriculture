@@ -5,11 +5,18 @@ import random
 import string
 from datetime import datetime, timedelta
 from sqlalchemy.orm import Session
+from typing import List, Optional
+
+# --- 核心模块导入 (已修正) ---
 from app import database
 from app.auth import schemas as auth_schemas
-from app.schemas import diagnosis as schemas_diagnosis
+# 从具体的 schema 文件中导入需要的 Pydantic 模型
+from app.schemas.diagnosis import FullDiagnosisReport, PredictionResult, RiskAssessment
+from app.schemas.product import ProductCreate
+from app.schemas.post import PostCreate
 from app.auth import security
-from typing import Optional
+from app.schemas.profile import ProfileUpdate
+
 
 # ====================================================================
 #  User Related CRUD Operations
@@ -58,7 +65,7 @@ def create_user(db: Session, user: auth_schemas.UserCreate) -> database.User:
     return db_user
 
 # ====================================================================
-#  Verification Code Related CRUD Operations
+#  Verification Code CRUD Operations
 # ====================================================================
 
 def create_verification_code(db: Session, user_id: int, purpose: str) -> str:
@@ -116,9 +123,9 @@ def verify_user_code(db: Session, user_id: int, code: str, purpose: str) -> bool
 def create_diagnosis_history(
     db: Session,
     user_id: int,
-    report: schemas_diagnosis.FullDiagnosisReport,
-    prediction: schemas_diagnosis.PredictionResult,
-    risk: schemas_diagnosis.RiskAssessment,
+    report: FullDiagnosisReport,
+    prediction: PredictionResult,
+    risk: RiskAssessment,
     image_url: str
 ) -> database.DiagnosisHistory:
     """
@@ -132,9 +139,64 @@ def create_diagnosis_history(
         risk_level=risk.risk_level,
         report_title=report.title,
         report_summary=report.diagnosis_summary,
-        # timestamp is set automatically by the database model's default
     )
     db.add(db_history_entry)
     db.commit()
     db.refresh(db_history_entry)
     return db_history_entry
+
+def get_diagnosis_history_by_user(db: Session, user_id: int) -> List[database.DiagnosisHistory]:
+    """
+    Retrieves all diagnosis history for a specific user.
+    """
+    return db.query(database.DiagnosisHistory).filter(database.DiagnosisHistory.user_id == user_id).order_by(database.DiagnosisHistory.timestamp.desc()).all()
+
+# ====================================================================
+#  Product CRUD Operations
+# ====================================================================
+
+def create_user_product(db: Session, product: ProductCreate, user_id: int) -> database.Product:
+    """
+    Creates a new product for a business user.
+    """
+    db_product = database.Product(**product.dict(), seller_id=user_id)
+    db.add(db_product)
+    db.commit()
+    db.refresh(db_product)
+    return db_product
+
+def get_products(db: Session, skip: int = 0, limit: int = 100) -> List[database.Product]:
+    """
+    Retrieves a list of all active products for the marketplace.
+    """
+    return db.query(database.Product).filter(database.Product.is_active == True).offset(skip).limit(limit).all()
+
+# ====================================================================
+#  Post CRUD Operations
+# ====================================================================
+
+def create_post(db: Session, post: PostCreate, user_id: int) -> database.Post:
+    """
+    Creates a new post for a user.
+    """
+    db_post = database.Post(content=post.content, owner_id=user_id)
+    db.add(db_post)
+    db.commit()
+    db.refresh(db_post)
+    return db_post
+
+def get_posts(db: Session, skip: int = 0, limit: int = 100) -> List[database.Post]:
+    """
+    Retrieves a list of all posts, newest first.
+    """
+    return db.query(database.Post).order_by(database.Post.created_at.desc()).offset(skip).limit(limit).all()
+
+def update_user_profile(db: Session, user: database.User, profile_update: ProfileUpdate):
+    profile = user.profile
+    update_data = profile_update.dict(exclude_unset=True)
+    for key, value in update_data.items():
+        setattr(profile, key, value)
+    db.add(profile)
+    db.commit()
+    db.refresh(profile)
+    return profile
