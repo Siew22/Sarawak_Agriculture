@@ -37,7 +37,14 @@ async def create_new_post(
             shutil.copyfileobj(image.file, buffer)
         image_url = f"/static/posts/{unique_filename}"
         
-    return crud.create_post(db=db, content=content, image_url=image_url, location=location, user_id=current_user.id)
+    # --- 关键修复：使用正确的参数调用 crud.create_post ---
+    return crud.create_post(
+        db=db, 
+        content=content, 
+        image_url=image_url, 
+        location=location, 
+        user_id=current_user.id
+    )
 
 @router.get("/", response_model=List[Post])
 def read_all_posts(db: Session = Depends(database.get_db)):

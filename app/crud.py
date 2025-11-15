@@ -13,7 +13,7 @@ from app.auth import schemas as auth_schemas
 # 从具体的 schema 文件中导入需要的 Pydantic 模型
 from app.schemas.diagnosis import FullDiagnosisReport, PredictionResult, RiskAssessment
 from app.schemas.product import ProductCreate
-from app.schemas.post import PostCreate
+from app.schemas.post import PostCreate, CommentCreate
 from app.auth import security
 from app.schemas.profile import ProfileUpdate
 from app.schemas import order as order_schemas
@@ -165,7 +165,16 @@ def create_user_product(db: Session, product: ProductCreate, user_id: int, image
 def get_products(db: Session, skip: int = 0, limit: int = 100) -> List[database.Product]:
     return db.query(database.Product).filter(database.Product.is_active == True).offset(skip).limit(limit).all()
 
-def create_post(db: Session, content: str, user_id: int, image_url: Optional[str] = None, location: Optional[str] = None) -> database.Post:
+def create_post(
+    db: Session, 
+    user_id: int, 
+    content: str, 
+    image_url: Optional[str] = None, 
+    location: Optional[str] = None
+) -> database.Post:
+    """
+    Creates a new post with content, optional image, and optional location.
+    """
     db_post = database.Post(
         content=content, 
         owner_id=user_id,
@@ -183,20 +192,6 @@ def get_posts(db: Session, skip: int = 0, limit: int = 100) -> List[database.Pos
         joinedload(database.Post.comments).joinedload(database.Comment.owner).joinedload(database.User.profile),
         joinedload(database.Post.likes)
     ).order_by(database.Post.created_at.desc()).offset(skip).limit(limit).all()
-
-# ====================================================================
-#  Post CRUD Operations
-# ====================================================================
-
-def create_post(db: Session, post: PostCreate, user_id: int) -> database.Post:
-    """
-    Creates a new post for a user.
-    """
-    db_post = database.Post(content=post.content, owner_id=user_id)
-    db.add(db_post)
-    db.commit()
-    db.refresh(db_post)
-    return db_post
 
 def update_user_profile(db: Session, user: database.User, profile_update: ProfileUpdate):
     profile = user.profile
