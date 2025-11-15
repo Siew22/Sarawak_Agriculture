@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 
 # --- 核心模块导入 ---
 from app import crud, database
@@ -152,3 +152,19 @@ def update_subscription(
     }
     
     return response_data
+
+class UserForChat(BaseModel):
+    id: int
+    profile: Profile
+
+    class Config:
+        from_attributes = True
+
+@router.get("/", response_model=List[UserForChat])
+def read_all_users(
+    db: Session = Depends(database.get_db),
+    current_user: database.User = Depends(get_current_user)
+):
+    """获取所有用户列表以供聊天选择 (排除当前用户)"""
+    users = db.query(database.User).filter(database.User.id != current_user.id).all()
+    return users

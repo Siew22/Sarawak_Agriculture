@@ -10,12 +10,12 @@
 
 body {
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    background-color: var(--bg-color); /* 使用主题变量中的背景颜色 */
-    color: var(--text-color); /* 使用主题变量中的文字颜色 */
-    margin: 0; /* 移除所有外边距 */
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    margin: 0;
     position: relative;
     min-height: 100vh;
-    overflow-x: hidden; /* 只禁止水平滚动，允许垂直滚动 */
+    overflow-x: hidden;
 }
 
 /* --- 神经网络动态背景 --- */
@@ -103,8 +103,8 @@ textarea {
     color: var(--text-color);
     box-sizing: border-box;
     font-size: 1em;
-    font-family: inherit; /* 确保字体一致 */
-    -webkit-appearance: none; /* 重置移动端浏览器的一些默认样式 */
+    font-family: inherit;
+    -webkit-appearance: none;
     -moz-appearance: none;
     appearance: none;
 }
@@ -196,8 +196,8 @@ input::placeholder {
 
 header {
     display: flex;
-    align-items: center; /* 保持垂直居中 */
-    gap: 20px; /* 在主要元素之间增加一些间距 */
+    align-items: center; 
+    gap: 20px;
     padding: 15px 30px;
     background: var(--surface-color);
     border-bottom: 1px solid var(--border-color);
@@ -208,18 +208,21 @@ header {
     top: 20px;
     z-index: 10;
 }
-.logo { font-size: 1.5em; font-weight: bold; }
+.logo { font-size: 1.5em; font-weight: bold; white-space: nowrap; }
 .logo span { background: linear-gradient(90deg, var(--primary-glow), var(--secondary-glow)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
 
 nav {
-    flex-grow: 1; /* --- 关键修复：让 nav 元素占据所有可用空间 --- */
-    text-align: center; /* 让内部的链接居中排列 */
+    flex-grow: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-wrap: nowrap;
 }
 
 nav a, .nav-button {
     color: var(--text-secondary);
     text-decoration: none;
-    margin: 0 15px; /* 保持链接之间的间距 */
+    margin: 0 10px;
     font-weight: 500;
     transition: color 0.2s;
     background: none;
@@ -227,8 +230,10 @@ nav a, .nav-button {
     cursor: pointer;
     font-size: 1em;
     font-family: inherit;
-    white-space: nowrap; /* --- 关键修复：禁止链接文字自身换行 --- */
+    white-space: nowrap; 
 }
+
+
 nav a.active-link {
     color: white;
     text-shadow: 0 0 5px var(--primary-glow);
@@ -248,7 +253,6 @@ main {
 
 .view-content {
     display: grid;
-    /* 让卡片自动适应屏幕宽度，每行最多放3个 */
     grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
     gap: 20px;
 }
@@ -353,13 +357,12 @@ main {
     border-top: 1px solid var(--border-color);
     padding-top: 15px;
 }
-/* 美化文件上传和位置按钮 */
 .action-btn {
     background: rgba(255, 255, 255, 0.1);
     border: none;
     color: var(--text-secondary);
     padding: 8px 12px;
-    border-radius: 20px; /* 圆角按钮 */
+    border-radius: 20px;
     cursor: pointer;
     font-weight: 500;
     transition: background-color 0.2s, color 0.2s;
@@ -369,10 +372,10 @@ main {
     color: white;
 }
 #postLocation {
-    flex-grow: 1; /* 让位置输入框填满剩余空间 */
+    flex-grow: 1;
 }
 .create-post-card .glow-button {
-    margin-left: auto; /* 让Post按钮靠右 */
+    margin-left: auto;
     width: auto;
     padding: 8px 20px;
 }
@@ -391,6 +394,8 @@ main {
 .post-owner-name {
     cursor: pointer;
     transition: color 0.2s;
+    text-decoration: none;
+    color: white;
 }
 .post-owner-name:hover {
     color: var(--primary-glow);
@@ -408,7 +413,6 @@ main {
 .post-timestamp {
     color: var(--text-secondary);
     font-size: 0.8em;
-    margin-left: auto; /* 让时间戳靠右 */
 }
 .post-content {
     margin-bottom: 15px;
@@ -455,4 +459,181 @@ main {
     color: var(--text-secondary);
     border-radius: 5px;
     cursor: pointer;
+}
+
+/* --- 聊天界面专属样式 --- */
+.chat-container {
+    display: grid;
+    grid-template-columns: 300px 1fr;
+    gap: 20px;
+    height: calc(100vh - 120px);
+    max-height: 800px;
+}
+
+#chat-sidebar {
+    display: flex;
+    flex-direction: column;
+}
+#user-list {
+    overflow-y: auto;
+    flex-grow: 1;
+}
+
+.user-list-item {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    padding: 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    border-bottom: 1px solid var(--border-color);
+}
+.user-list-item:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+.user-list-item.active {
+    background-color: var(--primary-glow);
+    color: white;
+}
+.user-list-item.new-message::after {
+    content: '●';
+    color: var(--primary-glow);
+    margin-left: auto;
+    font-size: 0.8em;
+    animation: pulse 1.5s infinite;
+}
+@keyframes pulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.3; }
+    100% { opacity: 1; }
+}
+
+#chat-window {
+    display: flex;
+    flex-direction: column;
+}
+
+#chat-header {
+    padding-bottom: 15px;
+    border-bottom: 1px solid var(--border-color);
+    font-weight: bold;
+    color: white;
+    text-align: center;
+}
+
+#messages {
+    flex-grow: 1;
+    overflow-y: auto;
+    padding: 20px 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+.chat-placeholder {
+    margin: auto;
+    color: var(--text-secondary);
+}
+
+.message {
+    padding: 10px 15px;
+    border-radius: 20px;
+    max-width: 70%;
+    line-height: 1.5;
+}
+.message.sent {
+    background: var(--primary-glow);
+    color: white;
+    border-bottom-right-radius: 5px;
+    align-self: flex-end;
+}
+.message.received {
+    background: rgba(255, 255, 255, 0.15);
+    border-bottom-left-radius: 5px;
+    align-self: flex-start;
+}
+
+#chat-form {
+    display: flex;
+    gap: 10px;
+    padding-top: 15px;
+    border-top: 1px solid var(--border-color);
+}
+#message-input {
+    flex-grow: 1;
+    margin-bottom: 0;
+}
+#chat-form .send-btn {
+    padding: 0 20px;
+    width: auto;
+}
+
+/* --- 订单模态框样式 --- */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.7);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+    -webkit-backdrop-filter: blur(5px);
+    backdrop-filter: blur(5px);
+}
+
+.modal-content {
+    width: 90%;
+    max-width: 500px;
+    position: relative;
+    animation: slide-down 0.3s ease-out;
+}
+
+@keyframes slide-down {
+    from {
+        transform: translateY(-30px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+.close-modal {
+    position: absolute;
+    top: 15px;
+    right: 20px;
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    font-size: 2em;
+    cursor: pointer;
+    line-height: 1;
+}
+.close-modal:hover {
+    color: white;
+}
+
+#orderForm h4 {
+    margin-top: 25px;
+    margin-bottom: 10px;
+    color: var(--text-secondary);
+    font-weight: normal;
+    text-align: left;
+    border: none;
+}
+
+#orderForm .input-group {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 15px;
+}
+
+#orderForm #quantity {
+    width: 80px;
+    margin-bottom: 0;
 }

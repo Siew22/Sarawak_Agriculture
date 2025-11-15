@@ -184,6 +184,19 @@ class Comment(Base):
     owner = relationship("User")
     post = relationship("Post", back_populates="comments")
 
+# --- (新) 聊天消息模型 ---
+class ChatMessage(Base):
+    __tablename__ = "chat_messages"
+
+    id = Column(Integer, primary_key=True, index=True)
+    sender_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    recipient_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    content = Column(Text, nullable=False)
+    timestamp = Column(DateTime, default=datetime.datetime.utcnow)
+    
+    sender = relationship("User", foreign_keys=[sender_id])
+    recipient = relationship("User", foreign_keys=[recipient_id])
+
 # --- Dependency ---
 def get_db():
     db = SessionLocal()

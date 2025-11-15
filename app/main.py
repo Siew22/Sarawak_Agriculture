@@ -44,7 +44,7 @@ from app.services.data_management_service import data_management_service
 from app.services.knowledge_base_service import kb_service
 from app.services import permission_service
 from app.background_tasks import trigger_background_retraining
-from app.routers import users, token, diagnoses, products, posts, orders
+from app.routers import users, token, diagnoses, products, posts, orders, chat
 from app import crud
 from app.auth import security
 from app.dependencies import get_current_user, get_weather_data # <--- 导入新的依赖
@@ -77,6 +77,7 @@ app.include_router(diagnoses.router)
 app.include_router(products.router) # <--- 添加这一行
 app.include_router(posts.router)     # <--- 确保这一行也存在
 app.include_router(orders.router)    # <--- 确保这一行也存在
+app.include_router(chat.router)
 
 # --- Part 4: API 生命周期 ---
 @app.on_event("startup")

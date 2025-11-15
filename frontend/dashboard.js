@@ -1,9 +1,12 @@
 // ====================================================================
-//  frontend/dashboard.js (Final & Complete Version - Formatted with All Fixes)
+//  frontend/dashboard.js (Final & Complete - E-commerce Enabled)
 // ====================================================================
 
 // --- 1. Configuration & Global State ---
 const API_BASE_URL = 'http://127.0.0.1:8000';
+const USERS_API_URL = `${API_BASE_URL}/users/`;
+const CHAT_API_URL = `${API_BASE_URL}/chat`;
+const ORDERS_API_URL = `${API_BASE_URL}/orders/`;
 const USERS_ME_API_URL = `${API_BASE_URL}/users/me`;
 const DIAGNOSE_API_URL = `${API_BASE_URL}/diagnose`;
 const DIAGNOSES_HISTORY_API_URL = `${API_BASE_URL}/diagnoses/me`;
@@ -14,25 +17,17 @@ const SUBSCRIPTION_API_URL = `${API_BASE_URL}/users/me/subscription`;
 const appContainer = document.getElementById('app-container');
 let currentUser = null;
 const accessToken = localStorage.getItem('accessToken');
+let websocket = null;
 
 // --- 2. Core API Fetch Helper ---
 async function apiFetch(url, options = {}) {
-    const defaultHeaders = {
-        'Authorization': `Bearer ${accessToken}`
-    };
+    const defaultHeaders = { 'Authorization': `Bearer ${accessToken}` };
     if (!(options.body instanceof FormData)) {
         defaultHeaders['Content-Type'] = 'application/json';
     }
-
-    const config = {
-        ...options,
-        headers: { ...defaultHeaders, ...options.headers },
-        cache: 'no-cache', // Force browser to always revalidate with the server
-    };
-
+    const config = { ...options, headers: { ...defaultHeaders, ...options.headers }, cache: 'no-cache' };
     const response = await fetch(url, config);
     const contentType = response.headers.get("content-type");
-
     if (!response.ok) {
         let errorData = { detail: `HTTP error! status: ${response.status}` };
         if (contentType && contentType.indexOf("application/json") !== -1) {
@@ -40,49 +35,35 @@ async function apiFetch(url, options = {}) {
         }
         throw new Error(errorData.detail);
     }
-    if (response.status === 204 || !contentType || !contentType.includes("application/json")) {
-        return null;
-    }
+    if (response.status === 204 || !contentType || !contentType.includes("application/json")) return null;
     return response.json();
 }
 
 // --- 3. Initialization on Page Load ---
 document.addEventListener('DOMContentLoaded', async () => {
-    if (!accessToken) {
-        window.location.href = 'login.html';
-        return;
-    }
+    if (!accessToken) { window.location.href = 'login.html'; return; }
     try {
         currentUser = await apiFetch(USERS_ME_API_URL);
         renderDashboard();
-    } catch (e) {
-        console.error("Session is invalid or expired:", e);
-        logout();
-    }
+    } catch (e) { console.error("Session invalid:", e); logout(); }
 });
 
 // --- 4. Core Rendering Functions ---
-
 function renderDashboard() {
     appContainer.innerHTML = '';
     const dashboardContainer = document.createElement('div');
     dashboardContainer.className = 'dashboard-container';
-    
     const header = document.createElement('header');
     const { permissions, user_type, email } = currentUser;
-    
     let navLinks = `
         <a href="#" class="nav-link" data-view="profile">Profile</a>
         <a href="#" class="nav-link active-link" data-view="ai-diagnosis">AI Diagnosis</a>
         <a href="#" class="nav-link" data-view="diagnosis-history">History</a>
         <a href="#" class="nav-link ${!permissions.can_like_share ? 'disabled-link' : ''}" data-view="posts">Posts</a>
-        <a href="#" class="nav-link ${!permissions.can_chat ? 'disabled-link' : ''}" data-view="chat">Chat</a>
         <a href="#" class="nav-link ${!permissions.can_shop ? 'disabled-link' : ''}" data-view="shopping">Shopping</a>
+        <a href="#" class="nav-link ${!permissions.can_chat ? 'disabled-link' : ''}" data-view="chat">Chat</a>
     `;
-    if (user_type === 'business') {
-        navLinks += `<a href="#" class="nav-link" data-view="business-profile">Business Profile</a>`;
-    }
-
+    if (user_type === 'business') navLinks += `<a href="#" class="nav-link" data-view="business-profile">Business Profile</a>`;
     header.innerHTML = `
         <div class="logo">Sarawak <span>Agri-Advisor</span></div>
         <nav>${navLinks}</nav>
@@ -92,33 +73,34 @@ function renderDashboard() {
         </div>
     `;
     dashboardContainer.appendChild(header);
-
     const main = document.createElement('main');
     main.id = 'mainContent';
     dashboardContainer.appendChild(main);
     appContainer.appendChild(dashboardContainer);
-    
     attachNavListeners();
     document.getElementById('logoutButton').addEventListener('click', logout);
-
     const urlParams = new URLSearchParams(window.location.search);
-    const view = urlParams.get('view');
-    renderView(view || 'ai-diagnosis');
+    renderView(urlParams.get('view') || 'ai-diagnosis', urlParams.get('userId'));
 }
 
-async function renderView(viewId) {
+async function renderView(viewId, param) {
     const mainContent = document.getElementById('mainContent');
     mainContent.innerHTML = `<div class="card full-width" style="text-align: center;"><div class="spinner"></div></div>`;
-
     document.querySelectorAll('nav a, nav button').forEach(link => {
         link.classList.remove('active-link');
-        if (link.dataset.view === viewId) {
-            link.classList.add('active-link');
-        }
+        if (link.dataset.view === viewId) link.classList.add('active-link');
     });
     
+    if (websocket && viewId !== 'chat') {
+        console.log("Leaving chat view, closing WebSocket.");
+        websocket.close();
+        websocket = null;
+    }
+
     try {
-        if (viewId === 'ai-diagnosis') {
+        if (viewId === 'chat') {
+            await renderChatView(param);
+        } else if (viewId === 'ai-diagnosis') {
             mainContent.innerHTML = getAIDiagnosisHTML();
             attachDiagnosisListeners();
         } else if (viewId === 'diagnosis-history') {
@@ -141,14 +123,34 @@ async function renderView(viewId) {
             currentUser = latestUser;
             mainContent.innerHTML = getProfileHTML(currentUser);
             attachPlanButtonListeners();
-        } else if (viewId === 'chat'){
-             mainContent.innerHTML = getChatHTML();
         } else {
-            const capitalizedViewId = viewId.charAt(0).toUpperCase() + viewId.slice(1);
-            mainContent.innerHTML = `<div class="card full-width"><h3>${capitalizedViewId}</h3><p>Content for this view is coming soon.</p></div>`;
+            mainContent.innerHTML = `<div class="card full-width"><p>Content for this view is coming soon.</p></div>`;
         }
     } catch (error) {
         mainContent.innerHTML = `<div class="card full-width error-message"><p>Failed to load view: ${error.message}</p></div>`;
+    }
+}
+
+async function renderUserProfileView(userId) {
+    const mainContent = document.getElementById('mainContent');
+    mainContent.innerHTML = `<div class="card full-width" style="text-align: center;"><div class="spinner"></div></div>`;
+    try {
+        const userProfile = await apiFetch(`${USERS_API_URL}${userId}/profile`);
+        const avatarUrl = userProfile.avatar_url ? `${API_BASE_URL}${userProfile.avatar_url}` : `https://ui-avatars.com/api/?name=${encodeURIComponent(userProfile.name)}&background=random&color=fff&size=128`;
+        mainContent.innerHTML = `
+            <div class="card full-width" style="max-width: 600px; margin: auto; text-align: center;">
+                <img src="${avatarUrl}" class="avatar" style="width: 100px; height: 100px; margin-bottom: 20px;">
+                <h3>${userProfile.name}</h3>
+                <p><strong>User Type:</strong> ${userProfile.user_type}</p>
+                <button class="glow-button" id="startChatBtn" data-user-id="${userProfile.id}">Start Chat</button>
+            </div>
+        `;
+        document.getElementById('startChatBtn').addEventListener('click', (e) => {
+            const targetUserId = e.currentTarget.dataset.userId;
+            renderView('chat', targetUserId);
+        });
+    } catch (error) {
+        mainContent.innerHTML = `<div class="card full-width error-message"><p>Failed to load user profile: ${error.message}</p></div>`;
     }
 }
 
@@ -182,12 +184,7 @@ function getAIDiagnosisHTML() {
 
 function getDiagnosisHistoryHTML(history) {
     if (!history || history.length === 0) {
-        return `
-            <div class="card full-width">
-                <h3>Diagnosis History</h3>
-                <p>No diagnosis history found. Perform a diagnosis to see your history here.</p>
-            </div>
-        `;
+        return `<div class="card full-width"><h3>Diagnosis History</h3><p>No diagnosis history found.</p></div>`;
     }
     const historyCards = history.map(item => `
         <div class="card">
@@ -204,7 +201,6 @@ function getDiagnosisHistoryHTML(history) {
 
 function getPostsHTML(posts) {
     let html = `<h3>Community Posts</h3>`;
-
     if (currentUser.permissions.can_post) {
         html += `
             <div class="card create-post-card">
@@ -219,26 +215,21 @@ function getPostsHTML(posts) {
                     </div>
                     <p class="error-message" id="post-error"></p>
                 </form>
-            </div>
-        `;
+            </div>`;
     }
-
     if (!posts || posts.length === 0) {
         html += `<div class="card"><p>No posts yet. Be the first to share!</p></div>`;
     } else {
         html += posts.map(post => {
             const isLiked = post.likes.some(like => like.user_id === currentUser.id);
             const ownerName = post.owner.profile ? post.owner.profile.name : post.owner.email;
-            const avatarUrl = post.owner.profile && post.owner.profile.avatar_url 
-                            ? `${API_BASE_URL}${post.owner.profile.avatar_url}` 
-                            : `https://ui-avatars.com/api/?name=${encodeURIComponent(ownerName)}&background=random&color=fff`;
-
+            const avatarUrl = post.owner.profile && post.owner.profile.avatar_url ? `${API_BASE_URL}${post.owner.profile.avatar_url}` : `https://ui-avatars.com/api/?name=${encodeURIComponent(ownerName)}&background=random&color=fff`;
             return `
             <div class="card post-card" data-post-id="${post.id}">
                 <div class="post-header">
-                    <img src="${avatarUrl}" class="avatar">
+                    <a href="#" class="user-profile-link" data-user-id="${post.owner.id}"><img src="${avatarUrl}" class="avatar"></a>
                     <div>
-                        <strong>${ownerName}</strong>
+                        <a href="#" class="user-profile-link post-owner-name" data-user-id="${post.owner.id}"><strong>${ownerName}</strong></a>
                         ${post.location ? `<span class="post-location"> - at ${post.location}</span>` : ''}
                         <div class="post-timestamp">${new Date(post.created_at).toLocaleString()}</div>
                     </div>
@@ -246,26 +237,14 @@ function getPostsHTML(posts) {
                 <p class="post-content">${post.content}</p>
                 ${post.image_url ? `<img src="${API_BASE_URL}${post.image_url}" class="post-image">` : ''}
                 <div class="post-actions">
-                    ${currentUser.permissions.can_like_share ? `
-                        <button class="action-btn like-btn ${isLiked ? 'liked' : ''}">👍 Like (${post.likes.length})</button>
-                        <button class="action-btn share-btn">🔗 Share</button>
-                    ` : ''}
+                    ${currentUser.permissions.can_like_share ? `<button class="action-btn like-btn ${isLiked ? 'liked' : ''}">👍 Like (${post.likes.length})</button><button class="action-btn share-btn">🔗 Share</button>` : ''}
                 </div>
                 <div class="comments-section">
-                    ${post.comments.map(c => {
-                        const commenterName = c.owner.profile ? c.owner.profile.name : c.owner.email;
-                        return `<div class="comment"><p><small><strong>${commenterName}:</strong> ${c.content}</small></p></div>`;
-                    }).join('')}
-                    
-                    ${currentUser.permissions.can_comment ? `
-                        <form class="comment-form">
-                            <input type="text" name="content" placeholder="Write a comment...">
-                            <button type="submit" class="send-btn">Send</button>
-                        </form>
-                    ` : ''}
+                    ${post.comments.map(c => `<div class="comment"><p><small><strong>${c.owner.profile ? c.owner.profile.name : c.owner.email}:</strong> ${c.content}</small></p></div>`).join('')}
+                    ${currentUser.permissions.can_comment ? `<form class="comment-form"><input type="text" name="content" placeholder="Write a comment..."><button type="submit" class="send-btn">Send</button></form>` : ''}
                 </div>
-            </div>
-        `}).join('');
+            </div>`;
+        }).join('');
     }
     return html;
 }
@@ -281,10 +260,12 @@ function getShoppingHTML(products) {
                 <h4>${p.name}</h4>
                 <p style="color: var(--text-secondary);">${p.description || ''}</p>
                 <p><strong>RM ${p.price.toFixed(2)}</strong></p>
-                <button class="glow-button buy-btn" data-product-id="${p.id}" data-product-name="${p.name}" data-price="${p.price}">Buy Now</button>
-            </div>
-        `).join('');
-        return `<div class="view-content">${productCards}</div>`;
+                <button class="glow-button buy-btn" 
+                        data-product-id="${p.id}" 
+                        data-product-name="${p.name}" 
+                        data-price="${p.price.toFixed(2)}">Buy Now</button>
+            </div>`).join('');
+        html = `<div class="view-content">${productCards}</div>`;
     }
     return `<div class="card full-width">${html}</div>`;
 }
@@ -359,15 +340,6 @@ function getProfileHTML(user) {
     `;
 }
 
-function getChatHTML() {
-    return `
-        <div class="card full-width">
-            <h3>Chat</h3>
-            <p>Direct messaging is under development.</p>
-        </div>
-    `;
-}
-
 function renderReport(data) {
     const reportContainer = document.getElementById('reportContainer');
     let xaiImageHTML = '';
@@ -389,18 +361,237 @@ function renderReport(data) {
     `;
 }
 
-// --- 6. Event Listeners & Interaction Logic ---
 
+// --- Chat Related Functions ---
+
+function getChatHTML() {
+    return `
+        <div class="chat-container">
+            <div id="chat-sidebar" class="card">
+                <h3>Conversations</h3>
+                <div id="user-list"><div class="spinner"></div></div>
+            </div>
+            <div id="chat-window" class="card">
+                <div id="chat-header">Select a conversation</div>
+                <div id="messages"><p class="chat-placeholder">Select a conversation to start chatting.</p></div>
+                <form id="chat-form" class="hidden">
+                    <input type="text" id="message-input" placeholder="Type a message..." autocomplete="off" required>
+                    <button type="submit" class="send-btn glow-button">Send</button>
+                </form>
+            </div>
+        </div>`;
+}
+
+async function renderChatView(targetUserId = null) {
+    document.getElementById('mainContent').innerHTML = getChatHTML();
+    connectWebSocket(); 
+
+    const userListDiv = document.getElementById('user-list');
+    try {
+        const users = await apiFetch(USERS_API_URL);
+        userListDiv.innerHTML = users.map(user => `
+            <div class="user-list-item" data-user-id="${user.id}" data-user-name="${user.profile.name}">
+                <img src="https://ui-avatars.com/api/?name=${encodeURIComponent(user.profile.name)}&background=random&color=fff" class="avatar">
+                <span>${user.profile.name}</span>
+            </div>`).join('');
+        
+        document.querySelectorAll('.user-list-item').forEach(item => {
+            item.addEventListener('click', () => {
+                item.classList.remove('new-message');
+                openChat(item.dataset.userId, item.dataset.userName);
+            });
+        });
+
+        if (targetUserId) {
+            const targetUserItem = document.querySelector(`.user-list-item[data-user-id='${targetUserId}']`);
+            if (targetUserItem) {
+                targetUserItem.classList.remove('new-message');
+                openChat(targetUserId, targetUserItem.dataset.userName);
+            }
+        }
+    } catch (error) {
+        userListDiv.innerHTML = `<p class="error-message">Could not load users.</p>`;
+    }
+}
+
+async function openChat(userId, userName) {
+    document.getElementById('chat-header').textContent = `Chat with ${userName}`;
+    const messagesDiv = document.getElementById('messages');
+    messagesDiv.innerHTML = '<div class="spinner"></div>'; 
+    
+    const chatForm = document.getElementById('chat-form');
+    chatForm.classList.remove('hidden');
+    chatForm.dataset.recipientId = userId; 
+
+    document.querySelectorAll('.user-list-item').forEach(item => item.classList.remove('active'));
+    document.querySelector(`.user-list-item[data-user-id='${userId}']`).classList.add('active');
+
+    try {
+        const history = await apiFetch(`${CHAT_API_URL}/history/${userId}`);
+        messagesDiv.innerHTML = ''; 
+        if (history.length === 0) {
+            messagesDiv.innerHTML = '<p class="chat-placeholder">This is the beginning of your conversation.</p>';
+        } else {
+            history.forEach(msg => {
+                const messageType = msg.sender_id === currentUser.id ? 'sent' : 'received';
+                appendMessage(msg.content, messageType);
+            });
+        }
+    } catch (error) {
+        messagesDiv.innerHTML = `<p class="error-message">Could not load chat history.</p>`;
+    }
+
+    const newChatForm = chatForm.cloneNode(true);
+    chatForm.parentNode.replaceChild(newChatForm, chatForm);
+    
+    newChatForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const input = document.getElementById('message-input');
+        const message = input.value.trim();
+        if (message && websocket && websocket.readyState === WebSocket.OPEN) {
+            const payload = { recipient_id: parseInt(userId), content: message };
+            websocket.send(JSON.stringify(payload));
+            appendMessage(message, 'sent'); 
+            input.value = '';
+        }
+    });
+}
+
+function appendMessage(content, type) {
+    const messagesDiv = document.getElementById('messages');
+    const placeholder = messagesDiv.querySelector('.chat-placeholder');
+    if (placeholder) placeholder.remove();
+    const messageElement = document.createElement('div');
+    messageElement.classList.add('message', type); 
+    messageElement.textContent = content;
+    messagesDiv.appendChild(messageElement);
+    messagesDiv.scrollTop = messagesDiv.scrollHeight; 
+}
+
+function connectWebSocket() {
+    if (websocket && websocket.readyState === WebSocket.OPEN) return; 
+    const wsUrl = `ws://${API_BASE_URL.replace('http://', '')}/chat/ws?token=${accessToken}`;
+    websocket = new WebSocket(wsUrl);
+
+    websocket.onopen = () => console.log("WebSocket connected!");
+    
+    websocket.onmessage = (event) => {
+        const messageData = JSON.parse(event.data);
+        const chatForm = document.getElementById('chat-form');
+        const currentRecipientId = chatForm ? chatForm.dataset.recipientId : null;
+        
+        if (String(messageData.sender_id) === currentRecipientId) {
+            appendMessage(messageData.content, 'received');
+        } else {
+            const senderItem = document.querySelector(`.user-list-item[data-user-id='${messageData.sender_id}']`);
+            if (senderItem) senderItem.classList.add('new-message');
+        }
+    };
+    
+    websocket.onclose = () => console.log("WebSocket disconnected.");
+    websocket.onerror = (error) => console.error("WebSocket error:", error);
+}
+
+// --- E-commerce Related Functions ---
+
+function showOrderModal(product) {
+    const oldModal = document.getElementById('orderModal');
+    if (oldModal) oldModal.remove();
+
+    const modal = document.createElement('div');
+    modal.id = 'orderModal';
+    modal.className = 'modal-overlay';
+    modal.innerHTML = `
+        <div class="modal-content card">
+            <button class="close-modal">&times;</button>
+            <h3>Checkout: ${product.name}</h3>
+            <p>Price: RM <span id="modalPrice">${product.price}</span></p>
+            
+            <form id="orderForm">
+                <h4>Shipping Information</h4>
+                <input type="text" name="recipient_name" placeholder="Full Name" required>
+                <input type="tel" name="recipient_phone" placeholder="Phone Number" required>
+                <textarea name="shipping_address" placeholder="Shipping Address" required></textarea>
+
+                <div class="input-group">
+                    <label for="quantity">Quantity:</label>
+                    <input type="number" id="quantity" name="quantity" value="1" min="1" required>
+                </div>
+                
+                <h3 style="margin-top: 20px;">Total: RM <span id="totalPrice">${product.price}</span></h3>
+
+                <h4>Payment Method</h4>
+                <select name="payment_method" required>
+                    <option value="spay">SPay Global</option>
+                    <option value="tng">Touch 'n Go eWallet</option>
+                    <option value="bank">Online Banking</option>
+                </select>
+                <input type="text" name="account_number" placeholder="Enter 16-digit Account Number" pattern="[0-9]{16}" title="Please enter exactly 16 digits" required>
+                
+                <button type="submit" class="glow-button">Confirm Purchase</button>
+                <p id="order-error" class="error-message"></p>
+            </form>
+        </div>
+    `;
+    document.body.appendChild(modal);
+
+    const closeModal = () => modal.remove();
+    modal.querySelector('.close-modal').onclick = closeModal;
+    modal.onclick = (e) => { if (e.target === modal) closeModal(); };
+
+    const quantityInput = modal.querySelector('#quantity');
+    const totalPriceSpan = modal.querySelector('#totalPrice');
+
+    quantityInput.addEventListener('input', () => {
+        const quantity = parseInt(quantityInput.value) || 0;
+        const total = (quantity * parseFloat(product.price)).toFixed(2);
+        totalPriceSpan.textContent = total;
+    });
+
+    modal.querySelector('#orderForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const errorP = document.getElementById('order-error');
+        errorP.textContent = 'Processing...';
+
+        const formData = new FormData(e.target);
+        const orderData = {
+            recipient_name: formData.get('recipient_name'),
+            recipient_phone: formData.get('recipient_phone'),
+            shipping_address: formData.get('shipping_address'),
+            items: [{
+                product_id: parseInt(product.id),
+                quantity: parseInt(formData.get('quantity'))
+            }]
+        };
+
+        const accountNumber = formData.get('account_number');
+        if (!/^\d{16}$/.test(accountNumber)) {
+            errorP.textContent = 'Invalid account number. Must be 16 digits.';
+            return;
+        }
+
+        try {
+            const result = await apiFetch(ORDERS_API_URL, {
+                method: 'POST',
+                body: JSON.stringify(orderData)
+            });
+            alert(`Purchase successful! Your order ID is #${result.id}.`);
+            closeModal();
+        } catch (error) {
+            errorP.textContent = `Purchase failed: ${error.message}`;
+        }
+    });
+}
+
+// --- 6. Event Listeners & Interaction Logic ---
 function attachNavListeners() {
     document.querySelectorAll('nav a, nav button').forEach(link => {
         link.addEventListener('click', (e) => {
             e.preventDefault();
             if (e.currentTarget.classList.contains('disabled-link')) {
-                alert('This feature is not available for your current subscription plan.');
-                return;
+                alert('This feature is not available for your current subscription plan.'); return;
             }
-            const viewId = e.currentTarget.dataset.view;
-            renderView(viewId);
+            renderView(e.currentTarget.dataset.view);
         });
     });
 }
@@ -426,7 +617,6 @@ async function getGPSAndDiagnose(file) {
     const reportContainer = document.getElementById('reportContainer');
     loadingIndicator.classList.remove('hidden');
     reportContainer.innerHTML = '';
-    
     navigator.geolocation.getCurrentPosition(
         async (position) => {
             const { latitude, longitude } = position.coords;
@@ -459,23 +649,16 @@ function attachPlanButtonListeners() {
             const plan = e.target.dataset.plan;
             const errorP = document.getElementById('payment-error');
             errorP.textContent = '';
-            
             const planDisplayName = plan === 'free' ? 'Free Tier' : plan.replace('tier_', 'RM ');
-            if (!confirm(`Are you sure you want to switch to the ${planDisplayName} plan?`)) {
-                return;
-            }
-            
+            if (!confirm(`Are you sure you want to switch to the ${planDisplayName} plan?`)) return;
             try {
                 const updatedUser = await apiFetch(SUBSCRIPTION_API_URL, {
                     method: 'PUT',
                     body: JSON.stringify({ plan: plan }),
                 });
-                
                 currentUser = updatedUser;
                 alert('Plan updated successfully!');
-                
                 renderView('profile');
-
             } catch (error) {
                 errorP.textContent = `Failed to update plan: ${error.message}`;
             }
@@ -502,8 +685,7 @@ function attachPostListeners() {
                 navigator.geolocation.getCurrentPosition(
                     (position) => {
                         const { latitude, longitude } = position.coords;
-                        const locationName = `Lat: ${latitude.toFixed(4)}, Lon: ${longitude.toFixed(4)}`;
-                        postLocationInput.value = locationName;
+                        postLocationInput.value = `Lat: ${latitude.toFixed(4)}, Lon: ${longitude.toFixed(4)}`;
                         postLocationInput.classList.remove('hidden');
                         addLocationBtn.textContent = '📍 Location Added';
                     },
@@ -519,7 +701,6 @@ function attachPostListeners() {
                 postLocationInput.focus();
             }
         });
-
         postForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             const formData = new FormData(postForm);
@@ -531,7 +712,6 @@ function attachPostListeners() {
             }
         });
     }
-
     document.querySelectorAll('.post-card').forEach(card => {
         const postId = card.dataset.postId;
         const commentForm = card.querySelector('.comment-form');
@@ -566,16 +746,13 @@ function attachPostListeners() {
         if (shareBtn) {
             shareBtn.addEventListener('click', () => {
                 const postUrl = `${window.location.origin}${window.location.pathname}?view=post&id=${postId}`;
-                navigator.clipboard.writeText(postUrl)
-                    .then(() => alert('Post link copied to clipboard!'))
-                    .catch(() => alert('Failed to copy link.'));
+                navigator.clipboard.writeText(postUrl).then(() => alert('Post link copied!')).catch(() => alert('Failed to copy.'));
             });
         }
         card.querySelectorAll('.user-profile-link').forEach(link => {
             link.addEventListener('click', (e) => {
                 e.preventDefault();
-                const userId = e.currentTarget.dataset.userId;
-                renderView('user-profile', userId);
+                renderUserProfileView(e.currentTarget.dataset.userId);
             });
         });
     });
@@ -583,16 +760,13 @@ function attachPostListeners() {
 
 function attachShoppingListeners() {
     document.querySelectorAll('.buy-btn').forEach(button => {
-        button.addEventListener('click', async (e) => {
-            const productId = e.target.dataset.productId;
-            if (confirm("Simulate purchase?")) {
-                try {
-                    const result = await apiFetch(`${PRODUCTS_API_URL}/${productId}/buy`, { method: 'POST' });
-                    alert(result.message);
-                } catch (error) {
-                    alert(`Purchase failed: ${error.message}`);
-                }
-            }
+        button.addEventListener('click', (e) => {
+            const product = {
+                id: e.target.dataset.productId,
+                name: e.target.dataset.productName,
+                price: e.target.dataset.price
+            };
+            showOrderModal(product);
         });
     });
 }
@@ -606,10 +780,7 @@ function attachAddProductListeners() {
             errorP.textContent = '';
             const formData = new FormData(productForm);
             try {
-                await apiFetch(PRODUCTS_API_URL, {
-                    method: 'POST',
-                    body: formData,
-                });
+                await apiFetch(PRODUCTS_API_URL, { method: 'POST', body: formData });
                 alert('Product added successfully!');
                 renderView('business-profile');
             } catch (error) {
@@ -620,6 +791,7 @@ function attachAddProductListeners() {
 }
 
 function logout() {
+    if (websocket) websocket.close();
     localStorage.removeItem('accessToken');
     window.location.href = 'login.html';
 }

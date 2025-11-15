@@ -17,6 +17,7 @@ from app.schemas.post import PostCreate, CommentCreate
 from app.auth import security
 from app.schemas.profile import ProfileUpdate
 from app.schemas import order as order_schemas
+from fastapi import HTTPException # 确保导入 HTTPException
 
 # ====================================================================
 #  User Related CRUD Operations
@@ -214,9 +215,10 @@ def get_comments_for_post(db: Session, post_id: int) -> List[database.Comment]:
     return db.query(database.Comment).filter(database.Comment.post_id == post_id).order_by(database.Comment.created_at.asc()).all()
 
 def create_order(db: Session, order_data: order_schemas.OrderCreate, buyer_id: int) -> database.Order:
-    total_amount = 0
+    total_amount = 0.0
     order_items_to_create = []
 
+    # 1. 验证商品存在性并计算总价
     for item_data in order_data.items:
         product = db.query(database.Product).filter(database.Product.id == item_data.product_id).first()
         if not product:
@@ -225,29 +227,33 @@ def create_order(db: Session, order_data: order_schemas.OrderCreate, buyer_id: i
         price_at_purchase = product.price
         total_amount += price_at_purchase * item_data.quantity
         
+        # 准备要创建的OrderItem对象
         order_items_to_create.append(database.OrderItem(
             product_id=item_data.product_id,
             quantity=item_data.quantity,
             price_at_purchase=price_at_purchase
         ))
 
+    # 2. 创建主订单记录
     db_order = database.Order(
         buyer_id=buyer_id,
         recipient_name=order_data.recipient_name,
         recipient_phone=order_data.recipient_phone,
         shipping_address=order_data.shipping_address,
-        total_amount=total_amount
+        total_amount=total_amount,
+        status="Processing" # 设置初始状态
     )
     db.add(db_order)
     db.commit()
     db.refresh(db_order)
 
+    # 3. 创建所有订单项并关联到主订单
     for item in order_items_to_create:
         item.order_id = db_order.id
         db.add(item)
     
     db.commit()
-    db.refresh(db_order)
+    db.refresh(db_order) # 再次刷新以加载完整的items关系
     return db_order
 
 def get_orders_by_user(db: Session, user_id: int) -> List[database.Order]:
@@ -256,3 +262,23 @@ def get_orders_by_user(db: Session, user_id: int) -> List[database.Order]:
 # --- (新) 根据卖家ID获取产品 ---
 def get_products_by_seller(db: Session, seller_id: int) -> List[database.Product]:
     return db.query(database.Product).filter(database.Product.seller_id == seller_id).order_by(database.Product.id.desc()).all()
+
+def create_chat_message(db: Session, sender_id: int, recipient_id: int, content: str) -> database.ChatMessage:
+    """将一条聊天消息存入数据库"""
+    db_message = database.ChatMessage(
+        sender_id=sender_id,
+        recipient_id=recipient_id,
+        content=content
+    )
+    db.add(db_message)
+    db.commit()
+    db.refresh(db_message)
+    return db_message
+
+def get_chat_history(db: Session, user1_id: int, user2_id: int) -> List[database.ChatMessage]:
+    """获取两个用户之间的聊天历史记录"""
+    messages = db.query(database.ChatMessage).filter(
+        ((database.ChatMessage.sender_id == user1_id) & (database.ChatMessage.recipient_id == user2_id)) |
+        ((database.ChatMessage.sender_id == user2_id) & (database.ChatMessage.recipient_id == user1_id))
+    ).order_by(database.ChatMessage.timestamp.asc()).all()
+    return messages
