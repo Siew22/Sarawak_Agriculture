@@ -6,7 +6,7 @@
 
 // --- 1. CONFIGURATION & GLOBAL STATE ---
 
-const API_BASE_URL = 'http://127.0.0.1:8000';
+const API_BASE_URL = `${window.location.protocol}//${window.location.hostname}:8000`;
 
 // API Endpoints
 const USERS_API_URL = `${API_BASE_URL}/users/`;

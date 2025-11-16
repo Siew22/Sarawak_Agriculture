@@ -1,10 +1,13 @@
 # app/background_tasks.py
 from celery import Celery
 import subprocess
+import os
 from loguru import logger
 
+REDIS_HOST = os.environ.get('REDIS_HOST', 'redis')
+
 # 配置Celery
-celery_app = Celery('tasks', broker='redis://localhost:6379/0')
+celery_app = Celery('tasks', broker=f'redis://{REDIS_HOST}:6379/0')
 
 @celery_app.task
 def trigger_background_retraining():
