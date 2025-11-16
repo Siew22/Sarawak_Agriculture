@@ -1,20 +1,14 @@
-# docker-compose.yml (最终版 - 包含 ngrok 服务)
+# docker-compose.yml (调试版 - 移除了 healthcheck)
 
 services:
-  # --- 前端服务 ---
   frontend:
-    # (此部分保持不变)
-    build:
-      context: ./frontend
+    build: { context: ./frontend }
     container_name: sarawak_agri_frontend
     restart: unless-stopped
     ports: ["8080:80"]
 
-  # --- 后端服务 ---
   backend:
-    # (此部分保持不变)
-    build:
-      context: .
+    build: { context: . }
     container_name: sarawak_agri_backend
     restart: unless-stopped
     ports: ["8000:8000"]
@@ -22,9 +16,7 @@ services:
     depends_on: [db, redis, mail]
     env_file: [.env]
 
-  # --- 其他后端依赖服务 ---
   db:
-    # (此部分保持不变)
     image: mysql:8.0
     container_name: sarawak_agri_mysql
     restart: unless-stopped
@@ -35,43 +27,30 @@ services:
     volumes: [mysql_data:/var/lib/mysql]
 
   redis:
-    # (此部分保持不变)
     image: redis:7-alpine
     container_name: sarawak_agri_redis
     restart: unless-stopped
 
   mail:
-    # (此部分保持不变)
-    build:
-      context: ./mail_service
+    build: { context: ./mail_service }
     container_name: sarawak_agri_mail
     restart: unless-stopped
 
   worker:
-    # (此部分保持不变)
-    build:
-      context: .
+    build: { context: . }
     container_name: sarawak_agri_worker
     command: celery -A app.background_tasks.celery_app worker --loglevel=info
     volumes: ["./app:/app/app"]
     depends_on: [redis, backend]
     restart: unless-stopped
     env_file: [.env]
-
-  # --- 【【【 新增的 ngrok 服务 】】】 ---
+    
   ngrok:
     image: ngrok/ngrok:latest
     container_name: sarawak_agri_ngrok
     restart: unless-stopped
-    # 端口映射: 将容器的 4040 端口映射到主机的 4040 端口，以便我们访问 Web UI
-    ports:
-      - "4040:4040"
-    # 挂载配置文件
-    volumes:
-      - ./ngrok.yml:/etc/ngrok/ngrok.yml
-    # 启动命令: 告诉 ngrok 启动在配置文件中定义的所有隧道
-    command: start --all --config /etc/ngrok/ngrok.yml
-    # 依赖关系: 确保 ngrok 在后端服务启动之后再启动
+    ports: ["4040:4040"]
+    command: http backend:8000 --authtoken 2w4uQUFWisFpNRn7nXIuo9oJ6ks_66QJeh3V3DviwHjeSVzZ5 # 确保这里的 token 是正确的
     depends_on:
       - backend
 
