@@ -1,3 +1,5 @@
+# app/routers/token.py (最终修复版)
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
@@ -8,8 +10,14 @@ from app.auth import schemas as auth_schemas
 from app.auth import security
 from app.database import get_db
 
-router = APIRouter(tags=["Authentication"])
+# 【【【 核心修复 】】】
+# 我们给这个路由组添加一个明确的前缀 /auth
+router = APIRouter(
+    prefix="/auth",
+    tags=["Authentication"]
+)
 
+# 路由路径现在是 /token，结合上面的前缀，完整的地址是 POST /auth/token
 @router.post("/token", response_model=auth_schemas.Token)
 async def login_for_access_token(
     db: Session = Depends(get_db), 
@@ -20,7 +28,6 @@ async def login_for_access_token(
     """
     user = crud.get_user_by_email(db, email=form_data.username)
     
-    # --- 关键修复：使用正确的 status_code 和 detail ---
     if not user or not security.verify_password(form_data.password, user.hashed_password):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,

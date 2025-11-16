@@ -3,10 +3,10 @@
 // ====================================================================
 
 // API Endpoints
-const API_BASE_URL = 'https://b4f373b06bdb.ngrok-free.app/'; 
+const API_BASE_URL = 'https://3ab453a224d5.ngrok-free.app'; 
 
 const USERS_API_URL = `${API_BASE_URL}/users/`;
-const TOKEN_API_URL = `${API_BASE_URL}/token`;
+const TOKEN_API_URL = `${API_BASE_URL}/auth/token`;
 
 // ====================================================================
 //  DOM Element Selection
