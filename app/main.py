@@ -59,15 +59,20 @@ app = FastAPI(
 # --- 中间件与路由注册 ---
 app.add_middleware(
     CORSMiddleware,
+    # 允许来源列表
     allow_origins=[
-        "https://sarawak-agriculture.vercel.app/",
-        "https://*.vercel.app",       # 允许所有 Vercel 域名
-        "https://*.ngrok-free.app",   # 允许所有 ngrok 免费域名
-        "https://*.ngrok.io",         # 允许旧版 ngrok 域名
-        "http://localhost:8000",      # 允许本地开发环境
+        "https://sarawak-agriculture.vercel.app", # 您的主 Vercel 域名
+        "https://*.vercel.app",                   # 允许所有 Vercel 的预览域名
+        "https://*.ngrok-free.app",               # 允许所有新的 ngrok 免费域名
+        "https://*.ngrok.io",                     # 允许旧的 ngrok 域名
+        "http://localhost:8080",                  # 允许本地 Docker 前端
+        "http://127.0.0.1:8080",                  # 也加上 127.0.0.1 以防万一
     ],
+    # 是否支持携带 cookie
     allow_credentials=True,
+    # 允许所有 HTTP 方法 (GET, POST, PUT, DELETE, OPTIONS 等)
     allow_methods=["*"],
+    # 允许所有 HTTP 头部 (如 Content-Type, Authorization 等)
     allow_headers=["*"],
 )
 
