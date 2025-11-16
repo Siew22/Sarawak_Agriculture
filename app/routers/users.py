@@ -10,6 +10,8 @@ from app.services import email_service, permission_service
 from app.dependencies import get_current_user
 from app.schemas.profile import Profile, ProfileUpdate
 from pydantic import BaseModel
+from fastapi import Response # <-- 确保在文件顶部导入 Response
+from fastapi.responses import JSONResponse # <-- 确保导入 JSONResponse
 
 router = APIRouter(
     prefix="/users",
@@ -36,6 +38,14 @@ def get_public_user_profile(user_id: int, db: Session = Depends(database.get_db)
     response_data.id = user.id
     response_data.user_type = user.user_type
     return response_data
+
+@router.options("/", include_in_schema=False)
+async def options_users():
+    return JSONResponse(content={"detail": "OK"}, headers={
+        "Access-Control-Allow-Origin": "*", # 简单起见，我们允许所有来源
+        "Access-Control-Allow-Methods": "POST, GET, OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type, Authorization",
+    })
 
 @router.post("/", response_model=Dict[str, Any], status_code=status.HTTP_201_CREATED)
 def create_user_signup(user: auth_schemas.UserCreate, db: Session = Depends(get_db)):
