@@ -1,34 +1,17 @@
-# docker-compose.yml (最终版 - 前后端一体化)
-
-version: '3.8'
-
 services:
-  # --- 前端服务 ---
   frontend:
-    build:
-      context: ./frontend  # 指定构建上下文为 frontend 文件夹
-      dockerfile: Dockerfile # 指定使用 frontend 文件夹内的 Dockerfile
+    build: { context: ./frontend }
     container_name: sarawak_agri_frontend
     restart: unless-stopped
-    ports:
-      - "8080:80" # 将主机的 8080 端口映射到容器的 80 端口
-
-  # --- 后端服务 ---
+    ports: ["8080:80"]
   backend:
-    build:
-      context: . # 使用根目录的 Dockerfile
+    build: { context: . }
     container_name: sarawak_agri_backend
     restart: unless-stopped
-    ports:
-      - "8000:8000"
-    depends_on:
-      - db
-      - redis
-      - mail
-    env_file:
-      - .env
-
-  # --- 数据库服务 ---
+    ports: ["8000:8000"]
+    volumes: ["./app:/app/app"] # 允许代码热更新
+    depends_on: [db, redis, mail]
+    env_file: [.env]
   db:
     image: mysql:8.0
     container_name: sarawak_agri_mysql
@@ -36,35 +19,23 @@ services:
     environment:
       MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
       MYSQL_DATABASE: ${DB_NAME}
-    ports:
-      - "3307:3306"
-    volumes:
-      - mysql_data:/var/lib/mysql
-
-  # --- Redis 服务 ---
+    ports: ["3307:3306"]
+    volumes: [mysql_data:/var/lib/mysql]
   redis:
     image: redis:7-alpine
     container_name: sarawak_agri_redis
     restart: unless-stopped
-
-  # --- 邮件服务 ---
   mail:
-    build: .
+    build: { context: ./mail_service }
     container_name: sarawak_agri_mail
-    command: python mail_server.py
     restart: unless-stopped
-
-  # --- Celery 工人服务 ---
   worker:
-    build: .
+    build: { context: . }
     container_name: sarawak_agri_worker
     command: celery -A app.background_tasks.celery_app worker --loglevel=info
-    depends_on:
-      - redis
-      - backend
+    volumes: ["./app:/app/app"] # 允许代码热更新
+    depends_on: [redis, backend]
     restart: unless-stopped
-    env_file:
-      - .env
-
+    env_file: [.env]
 volumes:
   mysql_data:

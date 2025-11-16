@@ -1,7 +1,7 @@
 # app/services/email_service.py (简化版)
 import smtplib
 from email.mime.text import MIMEText
-from email.mime.multipart import MIMultipart
+from email.mime.multipart import MIMEMultipart
 from app.config import settings
 
 def send_verification_email(recipient_email: str, code: str) -> bool:
@@ -13,7 +13,7 @@ def send_verification_email(recipient_email: str, code: str) -> bool:
         print("--------------------------------------\n")
         return True
 
-    message = MIMultipart("alternative")
+    message = MIMEMultipart("alternative")
     message["Subject"] = "Your Verification Code - Sarawak Agri-Advisor"
     message["From"] = settings.SENDER_EMAIL
     message["To"] = recipient_email

@@ -1,4 +1,4 @@
-# .dockerignore
+# .dockerignore (新建文件)
 
 # Git and other VCS folders
 .git
@@ -15,12 +15,25 @@ ENV/
 **/__pycache__/
 *.pyc
 
-# Large Datasets - Do not include in the Docker image!
-/PlantVillage-Dataset/
-/Mydataset/
-/MasterDataset/
-/Datasets/
+# Frontend folder - VERY IMPORTANT
+# 告诉 Docker 在构建后端镜像时，完全忽略前端文件夹
+frontend/
+
+# Mail service folder - VERY IMPORTANT
+# 同样，忽略邮件服务文件夹
+mail_service/
+
+# Datasets & Models that shouldn't be in the image
+PlantVillage-Dataset/
+Mydataset/
+MasterDataset/
+Datasets/
 
 # Temporary files and logs
-/temp/
+temp/
 *.log
+logs/
+
+# IDE files
+.idea/
+.vscode/
