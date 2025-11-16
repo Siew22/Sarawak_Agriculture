@@ -6,7 +6,7 @@
 
 // --- 1. CONFIGURATION & GLOBAL STATE ---
 
-const API_BASE_URL = `${window.location.protocol}//${window.location.hostname}:8000`;
+const API_BASE_URL = 'https://sarawak-agriculture.vercel.app/';
 
 // API Endpoints
 const USERS_API_URL = `${API_BASE_URL}/users/`;
