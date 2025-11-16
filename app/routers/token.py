@@ -1,4 +1,4 @@
-# app/routers/token.py (最终修复版)
+# app/routers/token.py (最终简化版)
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
@@ -11,21 +11,17 @@ from app.auth import security
 from app.database import get_db
 
 # 【【【 核心修复 】】】
-# 我们给这个路由组添加一个明确的前缀 /auth
+# 移除所有 prefix，让路由定义更简单
 router = APIRouter(
-    prefix="/auth",
     tags=["Authentication"]
 )
 
-# 路由路径现在是 /token，结合上面的前缀，完整的地址是 POST /auth/token
+# 路由路径现在就是 /token
 @router.post("/token", response_model=auth_schemas.Token)
 async def login_for_access_token(
     db: Session = Depends(get_db), 
     form_data: OAuth2PasswordRequestForm = Depends()
 ):
-    """
-    Handles user login and returns a JWT access token.
-    """
     user = crud.get_user_by_email(db, email=form_data.username)
     
     if not user or not security.verify_password(form_data.password, user.hashed_password):
