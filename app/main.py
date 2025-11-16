@@ -59,10 +59,13 @@ app = FastAPI(
 # --- 中间件与路由注册 ---
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.ALLOWED_ORIGINS_LIST,
+    allow_origins=[
+        "https://*.vercel.app",       # 允许所有 Vercel 域名
+        "https://*.ngrok-free.app",   # 允许所有 ngrok 免费域名
+        "https://*.ngrok.io",         # 允许旧版 ngrok 域名
+    ],
     allow_credentials=True,
-    # 关键修复：明确允许所有常用的HTTP方法
-    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allow_methods=["*"],
     allow_headers=["*"],
 )
 

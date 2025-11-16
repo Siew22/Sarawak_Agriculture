@@ -1,18 +1,30 @@
+# docker-compose.yml (最终版 - 包含 ngrok 服务)
+
 services:
+  # --- 前端服务 ---
   frontend:
-    build: { context: ./frontend }
+    # (此部分保持不变)
+    build:
+      context: ./frontend
     container_name: sarawak_agri_frontend
     restart: unless-stopped
     ports: ["8080:80"]
+
+  # --- 后端服务 ---
   backend:
-    build: { context: . }
+    # (此部分保持不变)
+    build:
+      context: .
     container_name: sarawak_agri_backend
     restart: unless-stopped
     ports: ["8000:8000"]
-    volumes: ["./app:/app/app"] # 允许代码热更新
+    volumes: ["./app:/app/app"]
     depends_on: [db, redis, mail]
     env_file: [.env]
+
+  # --- 其他后端依赖服务 ---
   db:
+    # (此部分保持不变)
     image: mysql:8.0
     container_name: sarawak_agri_mysql
     restart: unless-stopped
@@ -21,21 +33,47 @@ services:
       MYSQL_DATABASE: ${DB_NAME}
     ports: ["3307:3306"]
     volumes: [mysql_data:/var/lib/mysql]
+
   redis:
+    # (此部分保持不变)
     image: redis:7-alpine
     container_name: sarawak_agri_redis
     restart: unless-stopped
+
   mail:
-    build: { context: ./mail_service }
+    # (此部分保持不变)
+    build:
+      context: ./mail_service
     container_name: sarawak_agri_mail
     restart: unless-stopped
+
   worker:
-    build: { context: . }
+    # (此部分保持不变)
+    build:
+      context: .
     container_name: sarawak_agri_worker
     command: celery -A app.background_tasks.celery_app worker --loglevel=info
-    volumes: ["./app:/app/app"] # 允许代码热更新
+    volumes: ["./app:/app/app"]
     depends_on: [redis, backend]
     restart: unless-stopped
     env_file: [.env]
+
+  # --- 【【【 新增的 ngrok 服务 】】】 ---
+  ngrok:
+    image: ngrok/ngrok:latest
+    container_name: sarawak_agri_ngrok
+    restart: unless-stopped
+    # 端口映射: 将容器的 4040 端口映射到主机的 4040 端口，以便我们访问 Web UI
+    ports:
+      - "4040:4040"
+    # 挂载配置文件
+    volumes:
+      - ./ngrok.yml:/etc/ngrok/ngrok.yml
+    # 启动命令: 告诉 ngrok 启动在配置文件中定义的所有隧道
+    command: start --all --config /etc/ngrok/ngrok.yml
+    # 依赖关系: 确保 ngrok 在后端服务启动之后再启动
+    depends_on:
+      - backend
+
 volumes:
   mysql_data:
