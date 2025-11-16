@@ -60,9 +60,11 @@ app = FastAPI(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
+        "https://sarawak-agriculture.vercel.app",
         "https://*.vercel.app",       # 允许所有 Vercel 域名
         "https://*.ngrok-free.app",   # 允许所有 ngrok 免费域名
         "https://*.ngrok.io",         # 允许旧版 ngrok 域名
+        "http://localhost:8000",      # 允许本地开发环境
     ],
     allow_credentials=True,
     allow_methods=["*"],
