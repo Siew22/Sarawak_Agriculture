@@ -1,4 +1,4 @@
-# docker-compose.yml (调试版 - 移除了 healthcheck)
+# docker-compose.yml (最终版 - 使用环境变量注入 Authtoken)
 
 services:
   frontend:
@@ -15,6 +15,12 @@ services:
     volumes: ["./app:/app/app"]
     depends_on: [db, redis, mail]
     env_file: [.env]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
 
   db:
     image: mysql:8.0
@@ -23,8 +29,10 @@ services:
     environment:
       MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
       MYSQL_DATABASE: ${DB_NAME}
-    ports: ["3307:3306"]
-    volumes: [mysql_data:/var/lib/mysql]
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
 
   redis:
     image: redis:7-alpine
@@ -49,10 +57,15 @@ services:
     image: ngrok/ngrok:latest
     container_name: sarawak_agri_ngrok
     restart: unless-stopped
-    ports: ["4040:4040"]
-    command: http backend:8000 --authtoken 2w4uQUFWisFpNRn7nXIuo9oJ6ks_66QJeh3V3DviwHjeSVzZ5 # 确保这里的 token 是正确的
+    ports:
+      - "4040:4040"
+    environment:
+      - NGROK_AUTHTOKEN=${NGROK_AUTHTOKEN}
+    command: http backend:8000 --domain juliette-unattempted-tammara.ngrok-free.dev
+    # --- ↓↓↓ 修改 depends_on，等待 backend 健康 ↓↓↓ ---
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
 
 volumes:
   mysql_data:

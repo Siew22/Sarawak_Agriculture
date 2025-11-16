@@ -1,4 +1,4 @@
-# app/routers/token.py (最终简化版)
+# 文件路径: app/routers/token.py (优化版)
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
@@ -10,13 +10,12 @@ from app.auth import schemas as auth_schemas
 from app.auth import security
 from app.database import get_db
 
-# 【【【 核心修复 】】】
-# 移除所有 prefix，让路由定义更简单
+# 我们在这里不设置 prefix，让路由路径更直接
 router = APIRouter(
     tags=["Authentication"]
 )
 
-# 路由路径现在就是 /token
+# 路由的完整路径就是 POST /token
 @router.post("/token", response_model=auth_schemas.Token)
 async def login_for_access_token(
     db: Session = Depends(get_db), 

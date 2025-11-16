@@ -1,3 +1,5 @@
+# app/config.py
+
 from pydantic_settings import BaseSettings
 from typing import Optional, List
 from urllib.parse import quote_plus
@@ -20,13 +22,15 @@ class Settings(BaseSettings):
 
     # --- External APIs ---
     SERPAPI_KEY: Optional[str] = None
-    RESEND_API_KEY: Optional[str] = None # <--- 已添加
+    RESEND_API_KEY: Optional[str] = None
+    # --- ↓↓↓ 在这里添加下面这一行 ↓↓↓ ---
+    NGROK_AUTHTOKEN: Optional[str] = None 
     
     # --- Email Configuration (for SMTP) ---
-    SMTP_SERVER: Optional[str] = None # <--- 已添加
-    SMTP_PORT: Optional[int] = None   # <--- 已添加
+    SMTP_SERVER: Optional[str] = None
+    SMTP_PORT: Optional[int] = None
     SENDER_EMAIL: str
-    SENDER_PASSWORD: Optional[str] = None # <--- 已添加 (App Password)
+    SENDER_PASSWORD: Optional[str] = None
     
     # --- CORS Configuration ---
     ALLOWED_ORIGINS: str

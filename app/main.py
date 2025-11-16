@@ -1,18 +1,18 @@
 # ====================================================================
-#  app/main.py (Final & Complete Version)
+#  app/main.py (Final & Optimized Version)
 # ====================================================================
 
-# --- Part 1: Pre-emptive Configuration (MUST RUN FIRST!) ---
+# --- Part 1: Pre-emptive Configuration ---
 import os
 from pathlib import Path
 
-# 关键修复：在所有其他导入之前，安全地配置matplotlib
+# 安全地配置matplotlib
 temp_mpl_dir = Path(__file__).resolve().parent.parent / "temp" / "mpl_config"
 os.makedirs(temp_mpl_dir, exist_ok=True)
 os.environ['MPLCONFIGDIR'] = str(temp_mpl_dir)
 
 
-# --- Part 2: Standard Imports ---
+# --- Part 2: Standard & App Imports ---
 import uuid
 import shutil
 from typing import Dict, Any, Optional
@@ -27,7 +27,7 @@ from loguru import logger
 import torch
 from sqlalchemy.orm import Session
 
-# --- 关键：将数据库初始化放在应用逻辑的最前面 ---
+# --- 数据库初始化 (保持在应用逻辑前) ---
 from app import database
 database.Base.metadata.create_all(bind=database.engine)
 
@@ -44,10 +44,12 @@ from app.services.data_management_service import data_management_service
 from app.services.knowledge_base_service import kb_service
 from app.services import permission_service
 from app.background_tasks import trigger_background_retraining
+# 确保导入了所有路由模块
 from app.routers import users, token, diagnoses, products, posts, orders, chat
 from app import crud
-from app.auth import security
-from app.dependencies import get_current_user, get_weather_data # <--- 导入新的依赖
+# 依赖项
+from app.dependencies import get_current_user, get_weather_data
+
 
 # --- Part 3: FastAPI Application Setup ---
 app = FastAPI(
@@ -56,38 +58,37 @@ app = FastAPI(
     version="3.2.0",
 )
 
-# --- 中间件与路由注册 ---
+# --- 中间件 (CORS) ---
 app.add_middleware(
     CORSMiddleware,
-    # 允许来源列表
     allow_origins=[
-        "https://sarawak-agriculture.vercel.app", # 您的主 Vercel 域名
-        "https://*.vercel.app",                   # 允许所有 Vercel 的预览域名
-        "https://*.ngrok-free.app",               # 允许所有新的 ngrok 免费域名
-        "https://*.ngrok.io",                     # 允许旧的 ngrok 域名
-        "http://localhost:8080",                  # 允许本地 Docker 前端
-        "http://127.0.0.1:8080",                  # 也加上 127.0.0.1 以防万一
+        "https://sarawak-agriculture.vercel.app",
+        "https://*.vercel.app",
+        "https://*.ngrok-free.app",
+        "https://*.ngrok.io",
+        "http://localhost:8080",
+        "http://127.0.0.1:8080",
     ],
-    # 是否支持携带 cookie
     allow_credentials=True,
-    # 允许所有 HTTP 方法 (GET, POST, PUT, DELETE, OPTIONS 等)
     allow_methods=["*"],
-    # 允许所有 HTTP 头部 (如 Content-Type, Authorization 等)
     allow_headers=["*"],
 )
 
+# --- 静态文件 ---
 static_path = Path(__file__).resolve().parent.parent / "static"
 (static_path / "uploads").mkdir(parents=True, exist_ok=True)
 (static_path / "xai_images").mkdir(parents=True, exist_ok=True)
 app.mount("/static", StaticFiles(directory=static_path), name="static")
 
-app.include_router(users.router)
-app.include_router(token.router)
-app.include_router(diagnoses.router)
-app.include_router(products.router) # <--- 添加这一行
-app.include_router(posts.router)     # <--- 确保这一行也存在
-app.include_router(orders.router)    # <--- 确保这一行也存在
-app.include_router(chat.router)
+# --- 路由注册 (干净、无重复) ---
+app.include_router(token.router) # 登录/认证路由
+app.include_router(users.router) # 用户相关路由
+app.include_router(diagnoses.router) # 诊断历史路由
+app.include_router(products.router) # 商品路由
+app.include_router(posts.router) # 社区帖子路由
+app.include_router(orders.router) # 订单路由
+app.include_router(chat.router) # 聊天路由
+
 
 # --- Part 4: API 生命周期 ---
 @app.on_event("startup")
@@ -105,34 +106,7 @@ async def shutdown_event():
     logger.info(f"Shutting down {settings.PROJECT_NAME} API...")
 
 
-# --- Part 5: 依赖注入 ---
-async def get_weather_data(latitude: float = Form(...), longitude: float = Form(...)) -> Dict[str, Any]:
-    try:
-        weather_data = await weather_service.get_current_weather(latitude, longitude)
-        logger.info(f"Weather data retrieved: Temp={weather_data['temperature']}°C, Humidity={weather_data['humidity']}%")
-        return weather_data
-    except ConnectionError as e:
-        logger.error(f"Weather service connection failed: {e}")
-        raise HTTPException(status_code=503, detail="Weather service is currently unavailable.")
-
-async def get_current_user(token: str = Header(..., alias="Authorization"), db: Session = Depends(database.get_db)) -> database.User:
-    credentials_exception = HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Could not validate credentials",
-        headers={"WWW-Authenticate": "Bearer"},
-    )
-    if not token.startswith("Bearer "):
-        raise credentials_exception
-    
-    token_value = token.split(" ")[1]
-    email = security.verify_token(token_value, credentials_exception)
-    user = crud.get_user_by_email(db, email=email)
-    if user is None:
-        raise credentials_exception
-    return user
-
-
-# --- Part 6: API 端点 ---
+# --- Part 5: API 端点 (只保留根路径和核心功能) ---
 @app.get("/", summary="API Health Check", tags=["General"])
 def read_root():
     return {"status": "ok", "message": f"Welcome to {settings.PROJECT_NAME} API!"}
@@ -141,16 +115,14 @@ def read_root():
 async def create_diagnosis_report(
     image: UploadFile = File(...),
     language: str = Form("en", enum=["en", "ms", "zh"]),
-    weather: Dict[str, Any] = Depends(get_weather_data), # 调用现在是正确的
-    current_user: database.User = Depends(get_current_user), # 调用现在是正确的
+    weather: Dict[str, Any] = Depends(get_weather_data),
+    current_user: database.User = Depends(get_current_user),
     db: Session = Depends(database.get_db)
 ):
     logger.info(f"User '{current_user.email}' (ID: {current_user.id}) performing diagnosis.")
     
-    # 1. 权限检查
     permission_service.check_api_limit(db, user=current_user)
 
-    # 2. 保存上传的图片
     try:
         unique_filename = f"{uuid.uuid4().hex}{Path(image.filename).suffix.lower()}"
         file_path = static_path / "uploads" / unique_filename
@@ -166,7 +138,6 @@ async def create_diagnosis_report(
         logger.error(f"Failed to save uploaded file: {e}")
         raise HTTPException(status_code=500, detail="Error saving image file.")
 
-    # 3. 执行诊断
     try:
         image_tensor = image_processing.image_processor.process(image_bytes)
         prediction = disease_classifier.classifier.predict(image_tensor)
@@ -179,7 +150,6 @@ async def create_diagnosis_report(
             if xai_url:
                 report.xai_image_url = xai_url
 
-        # 4. 记录API使用和保存诊断历史
         permission_service.log_api_usage(db, user_id=current_user.id, endpoint="/diagnose")
         crud.create_diagnosis_history(
             db=db, user_id=current_user.id, report=report,
@@ -205,11 +175,9 @@ async def predict_disease_risk(
             raise HTTPException(status_code=503, detail="Unable to retrieve valid weather forecast data.")
 
         daily_risks = disease_predictor_service.predict_daily_risk(forecast_data, disease_key)
-        disease_name = "Unknown Disease"
         
         kb_info = kb_service.get_disease_info(disease_key)
-        if kb_info and kb_info.get("name"):
-            disease_name = kb_info.get("name").get("en", disease_key)
+        disease_name = kb_info.get("name", {}).get("en", disease_key) if kb_info else disease_key
         
         return schemas_prediction.RiskPredictionResponse(
             disease_name=disease_name,
@@ -224,7 +192,7 @@ async def predict_disease_risk(
         
 async def _generate_and_attach_xai(image_tensor: torch.Tensor, image_bytes: bytes, predicted_class: str) -> Optional[str]:
     """
-    辅助函数，将XAI生成逻辑从主API端点中分离出来。
+    Helper function to generate and save XAI heatmap.
     """
     try:
         target_idx = disease_classifier.classifier.get_class_index(predicted_class)
