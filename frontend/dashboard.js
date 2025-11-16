@@ -72,7 +72,7 @@ async function apiFetch(url, options = {}) {
  */
 document.addEventListener('DOMContentLoaded', async () => {
     if (!accessToken) {
-        window.location.href = 'dashboard.html';
+        window.location.href = 'login.html';
         return;
     }
     try {
@@ -902,5 +902,5 @@ function attachAddProductListeners() {
 function logout() {
     if (websocket) websocket.close();
     localStorage.removeItem('accessToken');
-    window.location.href = 'dashboard.html';
+    window.location.href = 'login.html';
 }
