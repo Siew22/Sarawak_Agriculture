@@ -3,9 +3,10 @@
 // ====================================================================
 
 // API Endpoints
-const USERS_API_URL = 'http://127.0.0.1:8000/users/';
-const TOKEN_API_URL = 'http://127.0.0.1:8000/token';
-const API_BASE_URL = 'https://59e5b301ed9e.ngrok-free.app'
+const API_BASE_URL = 'https://59e5b301ed9e.ngrok-free.app'; 
+
+const USERS_API_URL = `${API_BASE_URL}/users/`;
+const TOKEN_API_URL = `${API_BASE_URL}/token`;
 
 // ====================================================================
 //  DOM Element Selection
@@ -202,6 +203,9 @@ loginForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     loginError.textContent = '';
     
+    // 【【【 在这里加上我们的“铁证” 】】】
+    alert(`Vercel 部署已更新！正在向 ${API_BASE_URL} 发送登录请求...`);
+
     const loginPayload = new FormData();
     loginPayload.append('username', document.getElementById('loginEmail').value);
     loginPayload.append('password', document.getElementById('loginPassword').value);
