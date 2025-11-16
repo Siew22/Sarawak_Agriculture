@@ -6,7 +6,7 @@
 
 // --- 1. CONFIGURATION & GLOBAL STATE ---
 
-const API_BASE_URL = 'https://681f84a9ca2d.ngrok-free.app/';
+const API_BASE_URL = 'https://59e5b301ed9e.ngrok-free.app/';
 
 // API Endpoints
 const USERS_API_URL = `${API_BASE_URL}/users/`;
