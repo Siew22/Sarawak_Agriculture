@@ -6,39 +6,7 @@
 
 // --- 1. CONFIGURATION & GLOBAL STATE ---
 
-let API_BASE_URL = ''; // 先定义一个空的全局变量
-
-// 这个函数会在页面加载时自动运行，去获取最新的 API 地址
-async function initializeApiUrl() {
-    try {
-        // 请求我们刚刚在 Vercel 上创建的服务器函数
-        const response = await fetch('/api/get-api-url');
-        if (!response.ok) {
-            throw new Error('Could not fetch API configuration.');
-        }
-        const data = await response.json();
-        API_BASE_URL = data.apiUrl;
-        console.log('API URL successfully initialized:', API_BASE_URL);
-
-        // 【重要】: 只有在 auth.js 中才需要这一行！
-        // 对于 auth.js，获取到 URL 后，更新一下表单里用到的常量
-        if (typeof USERS_API_URL !== 'undefined') {
-            window.USERS_API_URL = `${API_BASE_URL}/users/`;
-            window.TOKEN_API_URL = `${API_BASE_URL}/auth/token`;
-        }
-    } catch (error) {
-        console.error('Failed to initialize API URL:', error);
-        // 可以在页面上显示一个错误提示
-        alert('Fatal Error: Could not connect to the application server configuration. Please contact support.');
-    }
-}
-
-// 立即执行这个初始化函数
-initializeApiUrl();
-
-// 为了兼容旧代码，我们仍然定义这些变量，但它们的值会在上面被更新
-var USERS_API_URL = ``;
-var TOKEN_API_URL = ``;
+const API_BASE_URL = 'https://juliette-unattempted-tammara.ngrok-free.dev';
 
 // API Endpoints
 const USERS_API_URL = `${API_BASE_URL}/users/`;
