@@ -6,7 +6,7 @@ from typing import Dict, Any, Optional, List
 from app import crud, database
 from app.auth import schemas as auth_schemas
 from app.database import get_db
-from app.services import email_service, permission_service
+from app.services import notification_service, permission_service
 from app.dependencies import get_current_user
 from app.schemas.profile import Profile, ProfileUpdate
 from pydantic import BaseModel
@@ -54,9 +54,9 @@ def create_user_signup(user: auth_schemas.UserCreate, db: Session = Depends(get_
         db, user_id=new_user.id, purpose="signup_verification"
     )
     
-    email_sent_successfully = email_service.send_verification_email(
+    email_sent_successfully = notification_service.send_verification_email(
         recipient_email=new_user.email, code=verification_code
-    )
+        )
     
     if not email_sent_successfully:
         raise HTTPException(
