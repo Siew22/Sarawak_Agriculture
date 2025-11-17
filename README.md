@@ -62,25 +62,37 @@ The platform offers a seamless flow for users, from diagnosis to community inter
 
 ---
 
+---
+
 ## 🛠️ Technology Architecture & Code Modules
 
 The project is built on a modern, decoupled microservices architecture. The structure is as follows:
-.
-├── app/ # Main FastAPI backend application
-│ ├── auth/ # Authentication (JWT, Passwords) & Schemas
-│ ├── models/ # AI models (Classifier, Fuzzy Logic, NLG)
-│ ├── routers/ # API endpoints (users, products, posts, etc.)
-│ ├── services/ # Business logic (Weather, Email, Permissions)
-│ ├── train/ # Scripts for training all AI models
-│ ├── database.py # SQLAlchemy ORM models
-│ └── main.py # FastAPI application entrypoint
-├── frontend/ # Vanilla JS, HTML5, CSS3 single-page application
-├── knowledge_base/ # YAML files for multilingual disease info
-├── models_store/ # Stores trained model weights (.pth, .json)
-├── static/ # Serves user-uploaded images and generated content
-├── .env # Environment variables (!!! DO NOT COMMIT !!!)
-├── docker-compose.yml # Docker Compose orchestration file
-└── Dockerfile # Docker build instructions for the backend
+
+-   `.` (Project Root)
+    -   `app/`: Main FastAPI backend application
+        -   `auth/`: Authentication (JWT, Passwords) & Schemas
+        -   `models/`: AI models (Classifier, Fuzzy Logic, NLG)
+        -   `routers/`: API endpoints (users, products, posts, etc.)
+        -   `services/`: Business logic (Weather, Email, Permissions)
+        -   `train/`: Scripts for training all AI models
+        -   `database.py`: SQLAlchemy ORM models
+        -   `main.py`: FastAPI application entrypoint
+    -   `frontend/`: Vanilla JS, HTML5, CSS3 single-page application
+    -   `knowledge_base/`: YAML files for multilingual disease info
+    -   `models_store/`: Stores trained model weights (.pth, .json)
+    -   `static/`: Serves user-uploaded images and generated content
+    -   `.env`: Environment variables (**DO NOT COMMIT**)
+    -   `docker-compose.yml`: Docker Compose orchestration file
+    -   `Dockerfile`: Docker build instructions for the backend
+
+-   **Backend (`FastAPI`)**: Serves as the central nervous system, handling API requests, orchestrating AI model inferences, and managing database interactions.
+-   **Frontend (`Vanilla JS`)**: A lightweight, responsive user interface deployed on Vercel, communicating with the backend via a secure Ngrok tunnel during development.
+-   **Database (`MySQL`)**: A relational database for storing user data, profiles, diagnosis history, posts, products, and orders.
+-   **AI Core (`PyTorch`, `Scikit-fuzzy`)**: A collection of specialized Python modules responsible for image classification, risk assessment, and report generation.
+-   **Asynchronous Tasks (`Celery`, `Redis`)**: Redis serves as a message broker for Celery, which can handle long-running background tasks like model retraining without blocking the API.
+-   **Deployment (`Docker`)**: All services (backend, frontend, database, etc.) are containerized, ensuring consistency and simplifying deployment across any environment.
+
+---
 
 -   **Backend (`FastAPI`)**: Serves as the central nervous system, handling API requests, orchestrating AI model inferences, and managing database interactions.
 -   **Frontend (`Vanilla JS`)**: A lightweight, responsive user interface deployed on Vercel, communicating with the backend via a secure Ngrok tunnel during development.
