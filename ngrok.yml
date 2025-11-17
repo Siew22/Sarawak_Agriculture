@@ -1,12 +1,18 @@
-# ngrok.yml (最终版 - 使用免费固定域名)
-
-version: "2"
-authtoken: 2w4uQUFWisFpNRn7nXIuo9oJ6ks_66QJeh3V3DviwHjeSVzZ5 # <-- 仍然需要您的 authtoken
-
-tunnels:
-  backend:
-    proto: http
-    addr: backend:8000
-    # 【【【 核心修改 】】】
-    # 指定使用您的专属固定域名
-    domain: juliette-unattempted-tammara.ngrok-free.dev
+ngrok:
+  image: ngrok/ngrok:latest
+  container_name: sarawak_agri_ngrok
+  restart: unless-stopped
+  ports:
+    - "4040:4040"
+  env_file:
+    - .env
+  # 【【【 核心修改：在 command 中添加 CORS 头 】】】
+  command: >
+    http backend:8000 
+    --domain juliette-unattempted-tammara.ngrok-free.dev 
+    --log=stdout 
+    --log-level=debug
+    --response-header-add "Access-Control-Allow-Headers: *"
+    --response-header-add "Access-Control-Allow-Methods: *"
+  depends_on:
+    - backend

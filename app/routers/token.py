@@ -21,6 +21,9 @@ async def login_for_access_token(
     db: Session = Depends(get_db), 
     form_data: OAuth2PasswordRequestForm = Depends()
 ):
+    # --- ↓↓↓ 请在这里添加下面这行诊断代码 ↓↓↓ ---
+    print(f"--- [DIAGNOSTIC LOG] Received login attempt. User: '{form_data.username}', Password length: {len(form_data.password)} ---")
+    
     user = crud.get_user_by_email(db, email=form_data.username)
     
     if not user or not security.verify_password(form_data.password, user.hashed_password):

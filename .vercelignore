@@ -1,0 +1,38 @@
+﻿# 忽略所有非前端的文件和文件夹
+
+# Python后端应用
+app/
+
+# 所有数据集
+Mydataset/
+MasterDataset/
+PlantVillage-Dataset/
+Datasets/
+
+# AI模型文件
+models_store/
+
+# Docker相关文件
+docker-compose.yml
+Dockerfile
+.dockerignore
+mail_service/
+
+# Python环境和依赖
+venv/
+.venv/
+env/
+__pycache__/
+requirements.txt
+generate_hash.py
+
+# Git 文件
+.git/
+.gitattributes
+.gitignore
+
+# Vercel 配置文件 (因为它已经通过 vercel link 创建)
+.vercel/
+
+# 其他配置文件
+kaggle.json

@@ -1,33 +1,34 @@
-# mail_server.py
+# 文件路径: mail_service/mail_server.py (最终简化版)
+
 import smtpd
 import asyncore
-import threading
+import sys
 
 class DebuggingServer(smtpd.DebuggingServer):
+    # 重写 process_message 方法以美化输出
     def process_message(self, peer, mailfrom, rcpttos, data, **kwargs):
         print("\n" + "="*20 + " [DEBUG EMAIL RECEIVED] " + "="*20)
         print(f"From: {mailfrom}")
         print(f"To: {rcpttos}")
         print("-" * 64)
-        print(data.decode('utf-8', errors='ignore'))
+        # 尝试解码邮件内容，如果失败则忽略错误
+        try:
+            print(data.decode('utf-8', errors='ignore'))
+        except Exception as e:
+            print(f"[Could not decode email body: {e}]")
         print("="*66 + "\n")
+        # 刷新输出缓冲区，确保日志能立即显示
+        sys.stdout.flush()
 
-def run_smtp_server():
+def run_server():
     print(">>> Starting local SMTP debug server on port 8025...")
+    # 监听所有网络接口的 8025 端口
     server = DebuggingServer(('0.0.0.0', 8025), None)
     try:
+        # 启动事件循环，这将使脚本持续运行
         asyncore.loop()
     except KeyboardInterrupt:
-        pass
-
-if __name__ == '__main__':
-    server_thread = threading.Thread(target=run_smtp_server)
-    server_thread.daemon = True
-    server_thread.start()
-    
-    # Keep the main thread alive to see the output
-    try:
-        while True:
-            pass
-    except KeyboardInterrupt:
         print("\nShutting down SMTP server.")
+
+# 直接运行服务器
+run_server()

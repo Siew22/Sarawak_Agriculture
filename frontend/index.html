@@ -8,14 +8,12 @@
 </head>
 <body class="dark-theme">
 
-    <!-- 动态背景容器 -->
     <div class="background-animation">
         <div class="ball"></div>
         <div class="ball"></div>
         <div class="ball"></div>
     </div>
     
-    <!-- Login View -->
     <div id="loginView" class="view auth-container active">
         <div class="auth-box">
             <h1>Log In</h1>
@@ -29,7 +27,6 @@
         </div>
     </div>
 
-    <!-- Sign Up Initial Choice View -->
     <div id="choiceView" class="view auth-container">
         <div class="auth-box">
             <h2>Choose Your Account Type</h2>
@@ -41,48 +38,30 @@
         </div>
     </div>
 
-    <!-- Sign Up Form View -->
     <div id="signUpView" class="view auth-container">
         <div class="auth-box">
             <h2 id="signUpTitle">Create Public Account</h2>
             <form id="signUpForm">
                 <input type="hidden" id="userType" value="public">
-                <input type="text" id="signUpName" placeholder="Name" required>
-                <input type="text" id="signUpIcNo" placeholder="IC-No." required>
+                <input type="text" id="signUpName" placeholder="Name / Company Name" required>
+                <input type="text" id="signUpIcNo" placeholder="IC / Business Registration No.">
                 <input type="email" id="signUpEmail" placeholder="E-mail" required>
                 <input type="password" id="signUpPassword" placeholder="Password (min 8 characters)" minlength="8" required>
                 <input type="password" id="confirmPassword" placeholder="Confirm Password" required>
-                <input type="tel" id="signUpPhone" placeholder="Phone Number" required>
+                <input type="tel" id="signUpPhone" placeholder="Phone Number">
                 
                 <div id="businessFields" class="hidden">
+                    <input type="text" id="signUpOrg" placeholder="Organization Full Name">
                     <div class="option-group">
                         <p class="option-group-title">Organization Type</p>
                         <div class="options">
                             <input type="radio" id="type-small" name="companyType" value="Small Business" checked>
                             <label for="type-small">Small Business</label>
-
                             <input type="radio" id="type-enterprise" name="companyType" value="Enterprise">
                             <label for="type-enterprise">Enterprise</label>
-
                             <input type="radio" id="type-cooperative" name="companyType" value="Cooperative">
                             <label for="type-cooperative">Cooperative</label>
                         </div>
-                    </div>
-
-                    <div class="file-input-wrapper">
-                        <label for="halalCert" class="file-input-label">
-                            <span>Halal Cert</span>
-                            <span class="file-input-button">Attach File</span>
-                        </label>
-                        <input type="file" id="halalCert" class="file-input">
-                    </div>
-
-                    <div class="file-input-wrapper">
-                        <label for="businessLicense" class="file-input-label">
-                            <span>Business License</span>
-                            <span class="file-input-button">Attach File</span>
-                        </label>
-                        <input type="file" id="businessLicense" class="file-input">
                     </div>
                 </div>
                 
@@ -93,6 +72,7 @@
         </div>
     </div>
 
+    <!-- 只加载 auth.js -->
     <script src="./auth.js"></script>
 </body>
 </html>

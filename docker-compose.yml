@@ -1,27 +1,39 @@
-# docker-compose.yml (最终版 - 使用环境变量注入 Authtoken)
+# ====================================================================
+#  docker-compose.yml (Optimized for Startup Stability)
+# ====================================================================
 
 services:
+  # --- Frontend Service ---
+  # No changes needed here.
   frontend:
-    build: { context: ./frontend }
+    build:
+      context: ./frontend
     container_name: sarawak_agri_frontend
     restart: unless-stopped
-    ports: ["8080:80"]
+    ports:
+      - "8080:80"
 
+  # --- Backend API Service ---
+  # Runs the FastAPI application.
   backend:
-    build: { context: . }
+    build:
+      context: . # Uses the Dockerfile in the root directory
     container_name: sarawak_agri_backend
     restart: unless-stopped
-    ports: ["8000:8000"]
-    volumes: ["./app:/app/app"]
-    depends_on: [db, redis, mail]
-    env_file: [.env]
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 30s
+    ports:
+      - "8000:8000"
+    # 【【【 核心优化 1: 修改 depends_on 】】】
+    # 'backend' service will now wait until 'db' is healthy 
+    # and 'redis' has started before it attempts to start.
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    env_file:
+      - .env
 
+  # --- Database Service ---
   db:
     image: mysql:8.0
     container_name: sarawak_agri_mysql
@@ -33,39 +45,66 @@ services:
       - "3307:3306"
     volumes:
       - mysql_data:/var/lib/mysql
+    # 【【【 核心优化 2: 添加 healthcheck 】】】
+    # This check allows other services to wait until MySQL is truly ready.
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${DB_PASSWORD}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s # Give MySQL extra time to initialize on first run
 
+  # --- Caching & Message Broker Service ---
+  # 'redis' now has a healthcheck, which is good practice.
   redis:
     image: redis:7-alpine
     container_name: sarawak_agri_redis
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
+  # --- Debug Mail Service ---
+  # No changes needed here.
   mail:
-    build: { context: ./mail_service }
+    build:
+      context: ./mail_service
     container_name: sarawak_agri_mail
     restart: unless-stopped
 
+  # --- Background Task Worker ---
+  # 'worker' now waits for 'backend' to start. This is a more logical dependency flow.
   worker:
-    build: { context: . }
+    build:
+      context: . # Also uses the root Dockerfile
     container_name: sarawak_agri_worker
     command: celery -A app.background_tasks.celery_app worker --loglevel=info
-    volumes: ["./app:/app/app"]
-    depends_on: [redis, backend]
     restart: unless-stopped
-    env_file: [.env]
+    depends_on:
+      backend: # It depends on the backend code and connection settings
+        condition: service_started
+      redis:
+        condition: service_healthy # Wait for redis to be healthy too
+    env_file:
+      - .env
     
+  # --- Tunneling Service ---
+  # 'ngrok' now waits for 'backend' to be fully running.
   ngrok:
     image: ngrok/ngrok:latest
     container_name: sarawak_agri_ngrok
     restart: unless-stopped
     ports:
       - "4040:4040"
-    environment:
-      - NGROK_AUTHTOKEN=${NGROK_AUTHTOKEN}
-    command: http backend:8000 --domain juliette-unattempted-tammara.ngrok-free.dev
-    # --- ↓↓↓ 修改 depends_on，等待 backend 健康 ↓↓↓ ---
+    env_file:
+      - .env
+    command: http backend:8000 --domain juliette-unattempted-tammara.ngrok-free.dev --log=stdout --log-level=debug
     depends_on:
       backend:
-        condition: service_healthy
+        condition: service_started # It only needs the backend to have started, not necessarily healthy
 
+# --- Named Volume for Database Persistence ---
 volumes:
   mysql_data:

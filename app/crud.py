@@ -43,6 +43,7 @@ def create_user(db: Session, user: auth_schemas.UserCreate) -> database.User:
     """
     hashed_password = security.get_password_hash(user.password)
     
+    # 1. 创建 User 核心账户
     db_user = database.User(
         email=user.email, 
         hashed_password=hashed_password, 
@@ -52,12 +53,16 @@ def create_user(db: Session, user: auth_schemas.UserCreate) -> database.User:
     db.commit()
     db.refresh(db_user)
 
+    # 2. 创建 Profile 详细信息
+    # 【【【 关键确认点 】】】
+    # 确保 business 用户的 organization 和 company_type 字段也被正确处理
     db_profile = database.Profile(
         user_id=db_user.id,
         name=user.name,
         ic_no=user.ic_no,
         phone_number=user.phone_number,
-        company_type=user.company_type
+        organization=user.organization, # <--- 确保这一行存在
+        company_type=user.company_type    # <--- 确保这一行存在
     )
     db.add(db_profile)
     db.commit()

@@ -1,5 +1,6 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
+from sqlalchemy.exc import IntegrityError 
 from typing import Dict, Any, Optional, List
 
 # --- 核心模块导入 ---
@@ -52,35 +53,48 @@ def create_user_signup(user: auth_schemas.UserCreate, db: Session = Depends(get_
     """
     Handles new user registration and sends a verification email.
     """
-    if crud.get_user_by_email(db, email=user.email):
-        raise HTTPException(status_code=400, detail="Email already registered")
-    
-    if crud.get_profile_by_ic_no(db, ic_no=user.ic_no):
-        raise HTTPException(status_code=400, detail="IC number already registered")
+    # 2. 我们将把预先检查的代码移到 try...except 块中
+    try:
+        # 在创建用户前，先检查邮箱是否已存在
+        if crud.get_user_by_email(db, email=user.email):
+            raise HTTPException(status_code=400, detail="Email already registered")
 
-    new_user = crud.create_user(db=db, user=user)
-    
-    verification_code = crud.create_verification_code(
-        db, user_id=new_user.id, purpose="signup_verification"
-    )
-    
-    email_sent_successfully = email_service.send_verification_email(
-        recipient_email=new_user.email, code=verification_code
-    )
-    
-    if not email_sent_successfully:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Could not send verification email. Please ensure the debug email server is running."
+        new_user = crud.create_user(db=db, user=user)
+        
+        verification_code = crud.create_verification_code(
+            db, user_id=new_user.id, purpose="signup_verification"
         )
-    
-    return {
-        "message": "Signup successful! A verification code has been 'sent' (check your debug terminal).",
-        "user_id": new_user.id
-    }
+        
+        email_service.send_verification_email(
+            recipient_email=new_user.email, code=verification_code
+        )
+        
+        return {
+            "message": "Signup successful! A verification code has been 'sent' (check your debug terminal).",
+            "user_id": new_user.id
+        }
+    # 3. 【【【 核心修复 】】】
+    # 捕获数据库完整性错误
+    except IntegrityError as e:
+        db.rollback() # 回滚失败的事务
+        error_message = str(e.orig)
+        # 根据数据库返回的错误信息，判断是哪个字段重复了
+        if "users.email" in error_message:
+            raise HTTPException(status_code=400, detail="Email already registered")
+        elif "profiles.ic_no" in error_message:
+            raise HTTPException(status_code=400, detail="IC number already registered")
+        elif "profiles.phone_number" in error_message:
+            raise HTTPException(status_code=400, detail="Phone number already registered")
+        else:
+            # 如果是其他未知的唯一性冲突，返回一个通用错误
+            raise HTTPException(status_code=500, detail="A database integrity error occurred.")
 
 @router.post("/verify-email", status_code=status.HTTP_200_OK)
-def verify_email_with_code(user_id: int, code: str, db: Session = Depends(get_db)):
+def verify_email_with_code(
+    user_id: int = Query(...), 
+    code: str = Query(...), 
+    db: Session = Depends(get_db)
+):
     """
     Verifies the email verification code provided by the user.
     """
@@ -103,19 +117,28 @@ def read_users_me(current_user: database.User = Depends(get_current_user)):
     """
     Get current logged-in user's essential data and their permissions.
     """
-    from app.services import permission_service
-    permissions = permission_service.get_user_permissions(current_user)
+    # 【【【 核心修复 】】】
+    try:
+        if not current_user:
+            # 理论上 get_current_user 依赖会处理，但这里加一道保险
+            raise HTTPException(status_code=401, detail="User not found or invalid token")
 
-    # 关键修复：确保返回的数据包含所有 UserStatus 需要的字段
-    response_data = {
-        "id": current_user.id,
-        "email": current_user.email,
-        "user_type": current_user.user_type,
-        "subscription_tier": current_user.subscription_tier, # <--- 添加这一行
-        "permissions": permissions
-    }
-    
-    return response_data
+        permissions = permission_service.get_user_permissions(current_user)
+        
+        # 确保所有需要的字段都存在
+        response_data = {
+            "id": current_user.id,
+            "email": current_user.email,
+            "user_type": current_user.user_type,
+            "subscription_tier": current_user.subscription_tier,
+            "permissions": permissions
+        }
+        
+        return response_data
+    except Exception as e:
+        # 捕获任何可能的意外错误，并返回一个标准的 500 错误
+        print(f"ERROR in /users/me: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error while fetching user profile.")
 
 @router.get("/me/profile", response_model=Profile)
 def read_user_profile(current_user: database.User = Depends(get_current_user)):

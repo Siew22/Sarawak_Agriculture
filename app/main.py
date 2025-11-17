@@ -19,7 +19,7 @@ from typing import Dict, Any, Optional
 
 from fastapi import (
     FastAPI, File, UploadFile, HTTPException,
-    Form, Depends, Header, status
+    Form, Depends, Header, status, Request
 )
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -49,6 +49,7 @@ from app.routers import users, token, diagnoses, products, posts, orders, chat
 from app import crud
 # 依赖项
 from app.dependencies import get_current_user, get_weather_data
+from fastapi.responses import JSONResponse 
 
 
 # --- Part 3: FastAPI Application Setup ---
@@ -57,6 +58,22 @@ app = FastAPI(
     description="An AI-powered agricultural diagnosis system with subscriptions and permissions.",
     version="3.2.0",
 )
+
+# --- 【【【 核心修复：添加全局异常处理器 】】】 ---
+# 这个处理器会捕获所有未被处理的服务器内部错误
+@app.exception_handler(Exception)
+async def generic_exception_handler(request: Request, exc: Exception):
+    # 打印详细的错误日志到后端控制台，方便我们调试
+    print(f"--- UNHANDLED EXCEPTION ---")
+    import traceback
+    traceback.print_exc()
+    print(f"---------------------------")
+    
+    # 无论发生什么错误，都向前端返回一个标准的 JSON 错误响应
+    return JSONResponse(
+        status_code=500,
+        content={"detail": f"An internal server error occurred: {exc}"},
+    )
 
 # --- 中间件 (CORS) ---
 app.add_middleware(
@@ -213,3 +230,4 @@ async def _generate_and_attach_xai(image_tensor: torch.Tensor, image_bytes: byte
     except Exception as e:
         logger.error(f"Failed to generate XAI heatmap: {e}", exc_info=True)
         return None
+    
