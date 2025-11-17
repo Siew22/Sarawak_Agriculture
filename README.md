@@ -62,8 +62,6 @@ The platform offers a seamless flow for users, from diagnosis to community inter
 
 ---
 
----
-
 ## 🛠️ Technology Architecture & Code Modules
 
 The project is built on a modern, decoupled microservices architecture. The structure is as follows:
@@ -84,15 +82,6 @@ The project is built on a modern, decoupled microservices architecture. The stru
     -   `.env`: Environment variables (**DO NOT COMMIT**)
     -   `docker-compose.yml`: Docker Compose orchestration file
     -   `Dockerfile`: Docker build instructions for the backend
-
--   **Backend (`FastAPI`)**: Serves as the central nervous system, handling API requests, orchestrating AI model inferences, and managing database interactions.
--   **Frontend (`Vanilla JS`)**: A lightweight, responsive user interface deployed on Vercel, communicating with the backend via a secure Ngrok tunnel during development.
--   **Database (`MySQL`)**: A relational database for storing user data, profiles, diagnosis history, posts, products, and orders.
--   **AI Core (`PyTorch`, `Scikit-fuzzy`)**: A collection of specialized Python modules responsible for image classification, risk assessment, and report generation.
--   **Asynchronous Tasks (`Celery`, `Redis`)**: Redis serves as a message broker for Celery, which can handle long-running background tasks like model retraining without blocking the API.
--   **Deployment (`Docker`)**: All services (backend, frontend, database, etc.) are containerized, ensuring consistency and simplifying deployment across any environment.
-
----
 
 -   **Backend (`FastAPI`)**: Serves as the central nervous system, handling API requests, orchestrating AI model inferences, and managing database interactions.
 -   **Frontend (`Vanilla JS`)**: A lightweight, responsive user interface deployed on Vercel, communicating with the backend via a secure Ngrok tunnel during development.
@@ -149,7 +138,6 @@ The platform utilizes a freemium subscription model to generate revenue.
 
 This model shows strong potential for profitability and scalability, especially as more farmers and businesses join the ecosystem.
 
-第二部分：技术设置与运行说明
 ---
 
 ## 🚀 Getting Started (Technical Instructions)
@@ -166,40 +154,39 @@ Follow these instructions to get the full project running on your local machine.
 
 First, ensure Git LFS is activated. Then, clone the repository. This will automatically download the large dataset and model files tracked by LFS.
 
-git lfs install
-git clone https://github.com/Siew22/Sarawak-Agriculture-main.git
-cd Sarawak-Agriculture-main
+    git lfs install
+    git clone https://github.com/Siew22/Sarawak-Agriculture-main.git
+    cd Sarawak-Agriculture-main
 
 ### **2. Configure Environment Variables**
 
 In the project's root directory, create a file named `.env`. Copy the content from `.env.example` (if it exists) or use the template below. **This is a critical step.**
 
-```ini
-# .env file
+    # .env file
 
-# --- Database Configuration ---
-# These are for the MySQL container inside Docker
-DB_HOST=db
-DB_PORT=3306
-DB_USER=root
-DB_PASSWORD="your_strong_secret_password"  # <-- IMPORTANT: Replace with your password
-DB_NAME="sarawak_agri_prod"
+    # --- Database Configuration ---
+    # These are for the MySQL container inside Docker
+    DB_HOST=db
+    DB_PORT=3306
+    DB_USER=root
+    DB_PASSWORD="your_strong_secret_password"  # <-- IMPORTANT: Replace with your password
+    DB_NAME="sarawak_agri_prod"
 
-# --- Backend Application Settings ---
-PROJECT_NAME="Sarawak Agri-Advisor"
-CONFIDENCE_THRESHOLD=0.75
+    # --- Backend Application Settings ---
+    PROJECT_NAME="Sarawak Agri-Advisor"
+    CONFIDENCE_THRESHOLD=0.75
 
-# --- External API Keys ---
-SERPAPI_KEY="" 
-NGROK_AUTHTOKEN="YOUR_NGROK_AUTHTOKEN" # <-- IMPORTANT: Get from https://dashboard.ngrok.com/get-started/your-authtoken
+    # --- External API Keys ---
+    SERPAPI_KEY="" 
+    NGROK_AUTHTOKEN="YOUR_NGROK_AUTHTOKEN" # <-- IMPORTANT: Get from https://dashboard.ngrok.com/get-started/your-authtoken
 
-# --- Email Configuration (for local debug server) ---
-SMTP_SERVER=mail
-SMTP_PORT=8025
-SENDER_EMAIL="noreply@sarawak-agri.dev"
+    # --- Email Configuration (for local debug server) ---
+    SMTP_SERVER=mail
+    SMTP_PORT=8025
+    SENDER_EMAIL="noreply@sarawak-agri.dev"
 
-# --- CORS Settings (for development) ---
-ALLOWED_ORIGINS="https://sarawak-agriculture.vercel.app,https://*.vercel.app,http://localhost:8080,http://127.0.0.1:8080"
+    # --- CORS Settings (for development) ---
+    ALLOWED_ORIGINS="https://sarawak-agriculture.vercel.app,https://*.vercel.app,http://localhost:8080,http://127.0.0.1:8080"
 
 **Important:**
 - Replace `your_strong_secret_password` with a secure password of your choice.
@@ -211,9 +198,9 @@ This is the simplest and most reliable way to run the entire application stack.
 
 1.  Make sure Docker Desktop is running.
 2.  From the project root directory, run the following command:
-    ```
-    docker-compose up --build
-    ```
+
+        docker-compose up --build
+
 3.  **Wait patiently.** The first time you run this, Docker will download all the necessary base images (Python, MySQL, Nginx, Redis) and build your application containers. This can take several minutes. The `db` service in particular may take a minute or two to initialize.
 4.  Once all services are up and running (you will see logs from `backend`, `frontend`, `ngrok`, etc.), your application is live!
 
@@ -229,12 +216,11 @@ If you wish to retrain the AI models:
 1.  **Image Classifier:**
     -   Organize your datasets in the appropriate folders.
     -   Run the training script inside a running Docker container to ensure the environment is correct:
-        ```
-        docker-compose exec backend python app/train/train_model_2.py
-        ```
+
+            docker-compose exec backend python app/train/train_model_2.py
+
 2.  **NLG Sentence Encoder:**
     -   Update the training data in `knowledge_base/nlg_training_data.json`.
     -   Run the training script:
-        ```
-        docker-compose exec backend python app/train/train_nlg_model.py
-        ```
+    
+            docker-compose exec backend python app/train/train_nlg_model.py
