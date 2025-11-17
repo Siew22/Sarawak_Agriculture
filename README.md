@@ -1,189 +1,60 @@
-# 🌿 Sarawak Agri-Advisor: An End-to-End AI Plant Doctor
-
-![Python](https://img.shields.io/badge/Python-3.10-3776AB?style=for-the-badge&logo=python&logoColor=white)
-![FastAPI](https://img.shields.io/badge/FastAPI-009688?style=for-the-badge&logo=fastapi&logoColor=white)
-![PyTorch](https://img.shields.io/badge/PyTorch-EE4C2C?style=for-the-badge&logo=pytorch&logoColor=white)
-![MySQL](https://img.shields.io/badge/MySQL-4479A1?style=for-the-badge&logo=mysql&logoColor=white)
-![Docker](https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white)
-
-An AI-powered, 100% self-developed plant disease diagnosis system designed for farmers in Sarawak, with a specialized focus on Black Pepper cultivation. This is a complete end-to-end web application that provides instant, AI-driven diagnosis, environmental risk assessment, and actionable management advice in multiple languages.
-
-The entire system, from data collection and model training to a multi-user backend API and deployment, is built from the ground up, demonstrating a full-stack AI development lifecycle.
+-   **Backend (`FastAPI`)**: Serves as the central nervous system, handling API requests, orchestrating AI model inferences, and managing database interactions.
+-   **Frontend (`Vanilla JS`)**: A lightweight, responsive user interface deployed on Vercel, communicating with the backend via a secure Ngrok tunnel during development.
+-   **Database (`MySQL`)**: A relational database for storing user data, profiles, diagnosis history, posts, products, and orders.
+-   **AI Core (`PyTorch`, `Scikit-fuzzy`)**: A collection of specialized Python modules responsible for image classification, risk assessment, and report generation.
+-   **Asynchronous Tasks (`Celery`, `Redis`)**: Redis serves as a message broker for Celery, which can handle long-running background tasks like model retraining without blocking the API.
+-   **Deployment (`Docker`)**: All services (backend, frontend, database, etc.) are containerized, ensuring consistency and simplifying deployment across any environment.
 
 ---
 
-## ✨ Core Features
+## 📈 Business Plan & Market Analysis
 
--   **📸 100% Self-Developed AI Model:** Upload a leaf photo for instant diagnosis. The core is a custom `EfficientNet` model, **trained from scratch** on a curated dataset of local pepper diseases.
--   **👥 Multi-User System with 2FA:** Secure registration and login for `Public` and `Business` users, featuring email verification (2FA) for account activation.
--   **🌦️ Fuzzy Logic Risk Assessment:** Automatically fetches local weather (via GPS) and uses a `Scikit-fuzzy` based inference system to calculate a real-time environmental risk score.
--   **🌐 Dynamic & Multilingual Reporting:** Generates comprehensive diagnostic reports in **English, Bahasa Malaysia, and Chinese**, sourced from a structured YAML knowledge base.
--   **🧠 AI-Enhanced Web Search:** For unrecognized diseases, the system uses a custom-trained **Siamese Network (LSTM-based)** to perform semantic web searches and find relevant information.
--   **🔍 XAI Model Explainability:** Provides **Grad-CAM** heatmaps to visualize which parts of the image the AI model focused on, making the diagnosis transparent.
--   **🌱 Self-Learning Architecture:** The system can automatically add new discoveries to the dataset and knowledge base, triggering a background retraining process via **Celery & Redis**.
--   **🐳 Dockerized Deployment:** The entire application stack (FastAPI, Celery Worker, Redis, MySQL) is containerized using **Docker Compose** for easy, reproducible deployment.
+### **Target Market**
+1.  **Primary**: Over 67,000 smallholder pepper farmers in Sarawak who lack immediate access to agricultural experts and rely on traditional methods for disease identification.
+2.  **Secondary**: Larger plantation enterprises, agricultural cooperatives, and government agencies (e.g., Department of Agriculture Sarawak) seeking digital tools for monitoring and data collection.
+3.  **Tertiary**: Local agricultural suppliers (fertilizers, pesticides, equipment) who can use the platform's Business accounts to market their products directly to farmers in need.
 
----
+### **Financial Projections (Simplified Estimation)**
 
-## 🛠️ Technology Stack
+#### **Estimated Costs (Monthly)**
+-   **Server Hosting (Cloud VM for Docker)**: RM 150 - RM 300 (e.g., DigitalOcean, AWS Lightsail)
+-   **Database Hosting (Managed Service)**: RM 50 - RM 100
+-   **Domain & SSL**: RM 10
+-   **Third-Party APIs (e.g., Ngrok Pro, Email Service)**: RM 50
+-   **Marketing & Outreach**: RM 200
+-   **Total Estimated Monthly Cost**: **~RM 460 - RM 660**
 
--   **Backend:** FastAPI, Uvicorn
--   **Database:** MySQL with SQLAlchemy (ORM)
--   **AI & Machine Learning:** PyTorch, Scikit-fuzzy, Grad-CAM, Sentence-Transformers, Passlib (for password hashing)
--   **Async Task Queue:** Celery, Redis
--   **Deployment:** Docker, Docker Compose
--   **Frontend:** Vanilla HTML5, CSS3, JavaScript (Fetch API, Geolocation API)
--   **Email Service (Dev):** Python's built-in `smtpd` for local debugging.
+#### **Revenue Model & Projections**
+The platform utilizes a freemium subscription model to generate revenue.
 
----
+| Tier              | Price (RM/month) | Target User | Key Features                                       |
+| ----------------- | ---------------- | ----------- | -------------------------------------------------- |
+| **Free**          | 0                | Public      | Limited AI diagnoses, access to community          |
+| **Pro (Tier 10)**     | 10               | Public      | More diagnoses, shopping, chat, posting            |
+| **Pro+ (Tier 15)**    | 15               | Public      | High-volume diagnoses, advanced analytics (future) |
+| **Business (Tier 20)**| 20               | Business    | List products, view sales analytics, post          |
 
-## 🚀 Getting Started Instructions
+**Projected Monthly Revenue (Based on User Adoption):**
 
-Follow these instructions to get the full project running on your local machine for development and testing.
+-   **Phase 1 (First 6 Months - 500 users):**
+    -   400 Free Users
+    -   80 Pro Users @ RM 10 = RM 800
+    -   20 Business Users @ RM 20 = RM 400
+    -   **Total Monthly Revenue**: **RM 1,200**
+    -   **Estimated Monthly Profit**: **~RM 540 - RM 740**
 
-### Prerequisites
+-   **Phase 2 (First Year - 2,500 users):**
+    -   1,800 Free Users
+    -   500 Pro Users @ RM 10 = RM 5,000
+    -   150 Pro+ Users @ RM 15 = RM 2,250
+    -   50 Business Users @ RM 20 = RM 1,000
+    -   **Total Monthly Revenue**: **RM 8,250**
+    -   **Estimated Monthly Profit**: **~RM 7,590**
 
-1.  **Git & Git LFS:** [Download Git](https://git-scm.com/downloads), [Install Git LFS](https://git-lfs.github.com/).
-2.  **Python 3.10:** [Download Python](https://www.python.org/downloads/).
-3.  **MySQL Server & Workbench:** [Download MySQL Community Server](https://dev.mysql.com/downloads/mysql/) and [MySQL Workbench](https://dev.mysql.com/downloads/workbench/). During installation, remember your `root` user password.
-4.  **(Optional for AI Training)** An NVIDIA GPU with CUDA drivers.
-
-### Step-by-Step Setup
-
-**1. Clone the Repository**
-   - First, ensure Git LFS is installed on your system. Open your terminal (Git Bash, PowerShell, etc.) and run:
-     ```bash
-     git lfs install
-     ```
-   - Clone the project. This will automatically download the large dataset and model files tracked by LFS.
-     ```bash
-     git clone https://github.com/Siew22/Sarawak_Agriculture.git
-     cd Sarawak_Agriculture
-     ```
-
-**2. Set Up the Database**
-   - Start your MySQL Server.
-   - Open **MySQL Workbench** and connect to your local server.
-   - Create a new database (schema) for the project. Run this SQL command:
-     ```sql
-     CREATE DATABASE sarawak_agri_prod;
-     ```
-
-**3. Configure Environment Variables**
-   - In the project's root directory, find the `.env.example` file (if it exists) and rename it to `.env`. If it doesn't exist, create a new file named `.env`.
-   - Open the `.env` file and fill in your details:
-     ```ini
-     # --- Database Configuration ---
-     DB_HOST=127.0.0.1
-     DB_PORT=3306
-     DB_USER=root
-     DB_PASSWORD="YOUR_MYSQL_ROOT_PASSWORD"  # <-- IMPORTANT: Replace with your actual password
-     DB_NAME="sarawak_agri_prod"
-
-     # --- Other Settings (Keep as is for now) ---
-     PROJECT_NAME="Sarawak Agri-Advisor"
-     CONFIDENCE_THRESHOLD=0.75
-     SERPAPI_KEY="" 
-     ALLOWED_ORIGINS="http://localhost,http://localhost:8080,http://127.0.0.1:5500,null"
-     ```
-
-**4. Set Up Python Virtual Environment**
-   - From the project root directory in your terminal:
-     ```bash
-     # Create a virtual environment
-     python -m venv env
-
-     # Activate it
-     # On Windows (PowerShell):
-     .\env\Scripts\Activate.ps1
-     # On macOS/Linux:
-     # source env/bin/activate
-     
-     # Install all required packages
-     pip install -r requirements.txt
-     ```
-
-**5. You are ready to run the application!**
+This model shows strong potential for profitability and scalability, especially as more farmers and businesses join the ecosystem.
 
 ---
 
-## ▶️ Running the Application (Development Mode)
+## 🚀 Getting Started (Technical Instructions)
 
-The application requires **two separate terminal windows** to run in development mode.
-
-**Terminal 1: Start the Local Email Debug Server**
-   - Open a new terminal, navigate to the project directory, and activate the virtual environment.
-   - Run the following command. This terminal will "listen" for emails and print them. **Do not close it.**
-     ```bash
-     python -m smtpd -c DebuggingServer -n localhost:8025
-     ```
-
-**Terminal 2: Start the FastAPI Backend Server**
-   - Open another new terminal, navigate to the project directory, and activate the virtual environment.
-   - Run the Uvicorn server. It will automatically connect to the database and email server.
-     ```bash
-     uvicorn app.main:app --reload
-     ```
-   - The backend is now live at `http://127.0.0.1:8000`. The first time you run this, it will automatically create all necessary tables in your `sarawak_agri_prod` database.
-
-**Access the Frontend**
-   - Navigate to the `frontend/` directory in your file explorer.
-   - Double-click the `login.html` file to open it in your browser.
-   - You can now test the full registration -> email verification -> login -> dashboard -> AI diagnosis workflow.
-
----
-
-## 🐳 Running with Docker (Production/Easy Mode)
-
-Once Docker Desktop is installed, you can run the entire stack with a single command.
-
-1.  Make sure your `.env` file is correctly configured as described in the setup steps.
-2.  From the project root directory, run:
-    ```bash
-    docker-compose up --build
-    ```
-    This will start the FastAPI backend, Redis, and a Celery worker. *Note: The provided `docker-compose.yml` does not include MySQL; it assumes a separate database instance.*
-
----
-
-## 🔬 Training Your Own Models (Optional)
-
-If you wish to retrain the models:
-
-1.  **Image Classifier:**
-    - Place your datasets in the appropriate folders.
-    - Run the training script:
-      ```bash
-      python app/train/train_model_2.py
-      ```
-2.  **NLG Sentence Encoder:**
-    - Update the training data in `knowledge_base/nlg_training_data.json`.
-    - Run the training script:
-      ```bash
-      python app/train/train_nlg_model.py
-      ```
-
----
-
-## 📂 Project Structure
-
-```
-.
-├── app/                  # Main FastAPI backend application
-│   ├── auth/             # Authentication logic and schemas
-│   ├── models/           # AI models (classifier, fuzzy logic, etc.)
-│   ├── routers/          # API endpoints (users, token)
-│   ├── services/         # Business logic (email, weather, etc.)
-│   ├── train/            # Scripts for training models
-│   ├── utils/            # Utility functions (image processing, XAI)
-│   ├── database.py       # SQLAlchemy setup and ORM models
-│   └── main.py           # FastAPI entrypoint
-├── frontend/             # All frontend files (HTML, CSS, JS)
-├── knowledge_base/       # YAML files for multilingual disease info
-├── models_store/         # Stores trained model weights (.pth)
-├── static/               # For serving static files like uploaded images
-├── .env                  # Environment variables (!!! DO NOT COMMIT !!!)
-├── docker-compose.yml    # Docker configuration
-├── Dockerfile            # Instructions to build the backend image
-└── requirements.txt      # Python dependencies
-```
+*Detailed setup instructions are provided in the original `README.md`. They cover cloning the repository with Git LFS, setting up the MySQL database, configuring the `.env` file, and running the application both locally and with Docker Compose.*
