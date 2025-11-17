@@ -51,7 +51,7 @@ The platform offers a seamless flow for users, from diagnosis to community inter
 6.  **History Tracking**: All diagnosis reports and purchase orders are saved to the user's profile for future reference.
 
 ### **Key Technical Features**
--   **🚀 100% Self-Developed AI Model:** A custom `EfficientNet-B2` model, trained from scratch on a curated dataset of local pepper diseases.
+-   **🚀 100% Self-Developed AI Model:** A custom `EfficientNet-B2` model, trained from scratch on a curated dataset of local black pepper diseases.
 -   **👥 Multi-User System with Subscriptions:** Secure registration for `Public` and `Business` users with tiered feature access controlled by a subscription model.
 -   **🌦️ Fuzzy Logic Risk Assessment:** Uses real-time weather data to calculate environmental risk scores.
 -   **🌐 Dynamic & Multilingual Reporting:** Generates reports in English, Bahasa Malaysia, and Chinese.
