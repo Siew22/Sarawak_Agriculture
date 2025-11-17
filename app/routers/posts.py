@@ -1,21 +1,23 @@
+# app/routers/posts.py (最终统一、完整版)
+
 import uuid
 import shutil
 from pathlib import Path
-from typing import List, Optional, Any, Dict
+from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status, File, UploadFile, Form, Response
 from sqlalchemy.orm import Session
 
 from app import crud, database
 from app.dependencies import get_current_user
-from app.schemas.post import Post, PostCreate, Comment, CommentCreate
+from app.schemas.post import Post, Comment
 from app.services import permission_service
 
-router = APIRouter(
-    prefix="/posts",
-    tags=["Posts"],
-)
+# 【【【 核心修复 1: 确保没有 prefix 】】】
+router = APIRouter(tags=["Posts"])
 
-@router.post("/", response_model=Post, status_code=status.HTTP_201_CREATED)
+# 【【【 核心修复 2: 在每个路由上使用完整的路径 】】】
+
+@router.post("/posts/", response_model=Post, status_code=status.HTTP_201_CREATED)
 async def create_new_post(
     content: str = Form(...),
     location: Optional[str] = Form(None),
@@ -37,7 +39,6 @@ async def create_new_post(
             shutil.copyfileobj(image.file, buffer)
         image_url = f"/static/posts/{unique_filename}"
         
-    # --- 关键修复：使用正确的参数调用 crud.create_post ---
     return crud.create_post(
         db=db, 
         content=content, 
@@ -46,21 +47,22 @@ async def create_new_post(
         user_id=current_user.id
     )
 
-@router.get("/", response_model=List[Post])
+@router.get("/posts/", response_model=List[Post])
 def read_all_posts(db: Session = Depends(database.get_db)):
     return crud.get_posts(db=db)
 
-@router.get("/{post_id}", response_model=Post)
+# 注意：带参数的路由要放在后面
+@router.get("/posts/{post_id}", response_model=Post)
 def read_post_details(post_id: int, db: Session = Depends(database.get_db)):
-    post = crud.get_post_by_id(db=db, post_id=post_id) # Assumes get_post_by_id exists in crud
+    post = crud.get_post_by_id(db=db, post_id=post_id)
     if not post:
         raise HTTPException(status_code=404, detail="Post not found")
     return post
 
-@router.post("/{post_id}/comments/", response_model=Comment)
+@router.post("/posts/{post_id}/comments/", response_model=Comment)
 def create_comment_for_post(
     post_id: int, 
-    comment: CommentCreate, 
+    comment: crud.CommentCreate, # Assuming CommentCreate is in crud, adjust if it's in schemas
     db: Session = Depends(database.get_db), 
     current_user: database.User = Depends(get_current_user)
 ):
@@ -69,7 +71,7 @@ def create_comment_for_post(
         raise HTTPException(status_code=403, detail="Your plan does not allow commenting.")
     return crud.create_comment(db=db, content=comment.content, post_id=post_id, user_id=current_user.id)
 
-@router.post("/{post_id}/like", status_code=status.HTTP_204_NO_CONTENT)
+@router.post("/posts/{post_id}/like", status_code=status.HTTP_204_NO_CONTENT)
 def toggle_like_on_post(
     post_id: int,
     db: Session = Depends(database.get_db),

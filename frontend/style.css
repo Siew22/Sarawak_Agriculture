@@ -687,3 +687,45 @@ main {
     font-weight: bold; /* 文字加粗 */
     box-shadow: 0 0 10px rgba(0, 170, 255, 0.5); /* 添加辉光效果 */
 }
+
+/* style.css (末尾) */
+.order-history-item {
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 15px;
+    margin-bottom: 15px;
+}
+.order-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 15px;
+    padding-bottom: 10px;
+    margin-bottom: 10px;
+    border-bottom: 1px solid var(--border-color);
+    font-size: 0.9em;
+}
+.order-status {
+    background-color: var(--primary-glow);
+    color: white;
+    padding: 3px 8px;
+    border-radius: 12px;
+    font-size: 0.9em;
+}
+.order-items {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+.order-item {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+.item-image {
+    width: 60px;
+    height: 60px;
+    border-radius: 4px;
+    object-fit: cover;
+}

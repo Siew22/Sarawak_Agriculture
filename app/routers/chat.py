@@ -1,9 +1,9 @@
-# app/routers/chat.py (完整替换)
+# app/routers/chat.py (完整修复版)
 
 import json
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Depends, Query, HTTPException
 from sqlalchemy.orm import Session
-from typing import List, Dict, Any
+from typing import List
 from pydantic import BaseModel
 from datetime import datetime
 
@@ -11,11 +11,14 @@ from app import database, crud
 from app.auth import security
 from app.dependencies import get_current_user # 导入我们统一的依赖
 
-router = APIRouter(prefix="/chat", tags=["Chat"])
+# 【【【 核心修改 1: 移除 prefix 】】】
+router = APIRouter(tags=["Chat"])
 
 class ConnectionManager:
     def __init__(self):
-        self.active_connections: Dict[int, WebSocket] = {}
+        # The type hint Dict[int, WebSocket] was removed in your original file,
+        # but it's good practice to keep it. I'll add it back.
+        self.active_connections: dict[int, WebSocket] = {}
 
     async def connect(self, websocket: WebSocket, user_id: int):
         await websocket.accept()
@@ -39,7 +42,8 @@ class ConnectionManager:
 
 manager = ConnectionManager()
 
-@router.websocket("/ws")
+# 【【【 核心修改 2: 使用完整路径 /chat/ws 】】】
+@router.websocket("/chat/ws")
 async def websocket_endpoint(
     websocket: WebSocket,
     token: str = Query(...), 
@@ -49,7 +53,7 @@ async def websocket_endpoint(
         email = security.verify_token(token, credentials_exception=WebSocketDisconnect())
         user = crud.get_user_by_email(db, email=email)
         if not user: raise WebSocketDisconnect()
-    except:
+    except Exception:
         await websocket.close(code=1008)
         return
 
@@ -63,15 +67,13 @@ async def websocket_endpoint(
             content = message_data.get("content")
 
             if recipient_id and content:
-                # 1. 实时转发消息 (和以前一样)
                 await manager.send_personal_message(content, recipient_id, user.id)
-                # 2. 【【【核心升级】】】将消息存入数据库
                 crud.create_chat_message(db, sender_id=user.id, recipient_id=recipient_id, content=content)
     
     except WebSocketDisconnect:
         manager.disconnect(user.id)
 
-# --- (新) Pydantic 模型，用于返回聊天记录 ---
+# --- Pydantic 模型，用于返回聊天记录 ---
 class ChatMessageOut(BaseModel):
     id: int
     sender_id: int
@@ -80,17 +82,19 @@ class ChatMessageOut(BaseModel):
     timestamp: datetime
 
     class Config:
-        from_attributes = True
+        from_attributes = True # Replaces orm_mode = True in Pydantic v2
 
-# --- (新) 获取历史记录的 HTTP 接口 ---
-@router.get("/history/{target_user_id}", response_model=List[ChatMessageOut])
+# 【【【 核心修改 3: 使用完整路径 /chat/history/{target_user_id} 】】】
+@router.get("/chat/history/{target_user_id}", response_model=List[ChatMessageOut])
 def get_user_chat_history(
     target_user_id: int,
     db: Session = Depends(database.get_db),
     current_user: database.User = Depends(get_current_user)
 ):
     """获取当前登录用户与目标用户之间的聊天历史记录"""
-    if not crud.get_user_by_email(db, email=current_user.email): # 确保用户有效
+    # Verifying current_user exists is already handled by get_current_user dependency.
+    # This check is redundant but harmless.
+    if not crud.get_user_by_email(db, email=current_user.email):
         raise HTTPException(status_code=401, detail="Invalid user")
     
     return crud.get_chat_history(db, current_user.id, target_user_id)

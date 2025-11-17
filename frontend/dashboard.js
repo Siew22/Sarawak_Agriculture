@@ -1,68 +1,54 @@
 // ====================================================================
-//  frontend/dashboard.js (Final Two-Page Version)
+//  frontend/dashboard.js (Final Unified Version)
 // ====================================================================
 
 // --- 1. CONFIGURATION & GLOBAL STATE ---
 const API_BASE_URL = 'https://juliette-unattempted-tammara.ngrok-free.dev';
-const USERS_ME_API_URL = `${API_BASE_URL}/users/me`;
-const USERS_API_URL = `${API_BASE_URL}/users/`;
-const DIAGNOSE_API_URL = `${API_BASE_URL}/diagnose`;
-const DIAGNOSES_HISTORY_API_URL = `${API_BASE_URL}/diagnoses/me`;
-const POSTS_API_URL = `${API_BASE_URL}/posts/`;
-const PRODUCTS_API_URL = `${API_BASE_URL}/products/`;
-const ORDERS_API_URL = `${API_BASE_URL}/orders/`;
-const SUBSCRIPTION_API_URL = `${API_BASE_URL}/users/me/subscription`;
-const CHAT_API_URL = `${API_BASE_URL}/chat`;
+
+console.log(`[Startup Debug] Initial API_BASE_URL is: ${API_BASE_URL}`);
+
+const USERS_API = `${API_BASE_URL}/users`;
+const DIAGNOSE_API = `${API_BASE_URL}/diagnose`;
+const DIAGNOSES_API = `${API_BASE_URL}/diagnoses`;
+const POSTS_API = `${API_BASE_URL}/posts`;
+const PRODUCTS_API = `${API_BASE_URL}/products`;
+const ORDERS_API = `${API_BASE_URL}/orders`;
+const CHAT_API = `${API_BASE_URL}/chat`;
 
 let currentUser = null;
 let websocket = null;
 
-// --- 2. INITIALIZATION ON PAGE LOAD (with Auth Guard) ---
-
+// --- 2. INITIALIZATION ON PAGE LOAD ---
 document.addEventListener('DOMContentLoaded', async () => {
     const appContainer = document.getElementById('app-container');
     appContainer.innerHTML = `<div style="display: flex; justify-content: center; align-items: center; height: 100vh;"><div class="spinner"></div></div>`;
 
-    let accessToken = localStorage.getItem('accessToken');
-    const urlParams = new URLSearchParams(window.location.search);
-    const justLoggedIn = urlParams.get('loggedin') === 'true';
-
-    // 【【【 核心修复 2: 新的守卫逻辑 】】】
-    if (!accessToken && !justLoggedIn) {
-        window.location.href = './index.html';
-        return;
-    }
-
-    if (justLoggedIn && !accessToken) {
-        await new Promise(resolve => setTimeout(resolve, 150));
-        accessToken = localStorage.getItem('accessToken');
-    }
-
+    const accessToken = localStorage.getItem('accessToken');
     if (!accessToken) {
-        alert('Login failed. Please try again.');
         window.location.href = './index.html';
         return;
     }
 
     try {
-        currentUser = await apiFetch(accessToken, USERS_ME_API_URL);
+        currentUser = await apiFetch(accessToken, `${USERS_API}/me`);
         renderDashboard(currentUser);
     } catch (e) {
         console.error("Session is invalid or expired:", e);
-        // apiFetch in dashboard.js handles logout on 401
     }
 });
 
-
 // --- 3. CORE HELPERS ---
-
 async function apiFetch(token, url, options = {}) {
-    // 【【【 在这里添加修复代码 】】】
+    console.log(`[apiFetch Debug] Received URL: ${url}`);
+    if (url && url.startsWith('http://')) {
+        console.warn(`[apiFetch Warn] Correcting URL from http to https: ${url}`);
+        url = url.replace('http://', 'https://');
+    }
+
     const defaultHeaders = { 
         'Authorization': `Bearer ${token}`,
-        'ngrok-skip-browser-warning': 'true' // <-- 添加这一行
+        'ngrok-skip-browser-warning': 'true'
     };
-    // 【【【 修复结束 】】】
 
     if (!(options.body instanceof FormData)) {
         defaultHeaders['Content-Type'] = 'application/json';
@@ -70,8 +56,8 @@ async function apiFetch(token, url, options = {}) {
     const config = { ...options, headers: { ...defaultHeaders, ...options.headers }, cache: 'no-cache' };
 
     try {
+        console.log(`[apiFetch Debug] Fetching from final URL: ${url}`);
         const response = await fetch(url, config);
-
         const contentLength = response.headers.get('content-length');
         if (response.status === 204 || contentLength === '0') {
             return null;
@@ -79,21 +65,19 @@ async function apiFetch(token, url, options = {}) {
 
         if (!response.ok) {
             if (response.status === 401) {
-                console.error("API returned 401 Unauthorized. Logging out.");
                 logout();
                 throw new Error("Session expired. Please log in again.");
             }
             const errorData = await response.json().catch(() => ({ 
                 detail: `The server responded with status: ${response.status}` 
             }));
-            throw new Error(errorData.detail);
+            throw new Error(errorData.detail || `Server error: ${response.status}`);
         }
         
         return await response.json();
-
     } catch (networkError) {
-        console.error("API Fetch Error:", networkError);
-        throw networkError;
+        console.error("[apiFetch Error] Network or fetch failed:", networkError);
+        throw new Error(`Failed to fetch. Reason: ${networkError.message}`);
     }
 }
 
@@ -103,9 +87,7 @@ function logout() {
     window.location.href = './index.html';
 }
 
-
 // --- 4. UI RENDERING FUNCTIONS ---
-
 function renderDashboard(user) {
     const appContainer = document.getElementById('app-container');
     appContainer.innerHTML = '';
@@ -118,7 +100,7 @@ function renderDashboard(user) {
     let navLinks = `
         <a href="#" class="nav-link" data-view="profile">Profile</a>
         <a href="#" class="nav-link active-link" data-view="ai-diagnosis">AI Diagnosis</a>
-        <a href="#" class="nav-link" data-view="diagnosis-history">History</a>
+        <a href="#" class="nav-link" data-view="history">History</a>
         <a href="#" class="nav-link ${!permissions.can_like_share ? 'disabled-link' : ''}" data-view="posts">Posts</a>
         <a href="#" class="nav-link ${!permissions.can_shop ? 'disabled-link' : ''}" data-view="shopping">Shopping</a>
         <a href="#" class="nav-link ${!permissions.can_chat ? 'disabled-link' : ''}" data-view="chat">Chat</a>
@@ -169,14 +151,36 @@ async function renderView(viewId, param) {
     }
 
     try {
-        if (viewId === 'chat') await renderChatView(param);
-        else if (viewId === 'ai-diagnosis') { mainContent.innerHTML = getAIDiagnosisHTML(); attachDiagnosisListeners(); }
-        else if (viewId === 'diagnosis-history') { const history = await apiFetch(token, DIAGNOSES_HISTORY_API_URL); mainContent.innerHTML = getDiagnosisHistoryHTML(history); }
-        else if (viewId === 'posts') { const posts = await apiFetch(token, POSTS_API_URL); mainContent.innerHTML = getPostsHTML(posts); attachPostListeners(); }
-        else if (viewId === 'shopping') { const products = await apiFetch(token, PRODUCTS_API_URL); mainContent.innerHTML = getShoppingHTML(products); attachShoppingListeners(); }
-        else if (viewId === 'business-profile' && currentUser.user_type === 'business') { const myProducts = await apiFetch(token, `${API_BASE_URL}/products/me`); mainContent.innerHTML = getBusinessProfileHTML(myProducts); attachAddProductListeners(); }
-        else if (viewId === 'profile') { currentUser = await apiFetch(token, USERS_ME_API_URL); mainContent.innerHTML = getProfileHTML(currentUser); attachPlanButtonListeners(); }
-        else mainContent.innerHTML = `<div class="card full-width"><p>Content for this view is coming soon.</p></div>`;
+        if (viewId === 'chat') {
+            await renderChatView(param);
+        } else if (viewId === 'ai-diagnosis') {
+            mainContent.innerHTML = getAIDiagnosisHTML();
+            attachDiagnosisListeners();
+        } else if (viewId === 'history') {
+            const diagnosisHistory = await apiFetch(token, `${DIAGNOSES_API}/me`);
+            const orderHistory = await apiFetch(token, `${ORDERS_API}/my-orders`);
+            mainContent.innerHTML = getCombinedHistoryHTML(diagnosisHistory, orderHistory); 
+        } else if (viewId === 'posts') {
+            const posts = await apiFetch(token, `${POSTS_API}/`);
+            mainContent.innerHTML = getPostsHTML(posts);
+            attachPostListeners();
+        } else if (viewId === 'shopping') {
+            const products = await apiFetch(token, `${PRODUCTS_API}/`);
+            mainContent.innerHTML = getShoppingHTML(products);
+            attachShoppingListeners();
+        } else if (viewId === 'business-profile' && currentUser.user_type === 'business') { 
+            const myProducts = await apiFetch(token, `${PRODUCTS_API}/me`); // <-- 使用正确的变量名
+            const salesData = await apiFetch(token, `${ORDERS_API}/sales`);
+            mainContent.innerHTML = getBusinessProfileHTML(myProducts, salesData); 
+            attachAddProductListeners();
+        } else if (viewId === 'profile') { 
+            currentUser = await apiFetch(token, `${USERS_API}/me`);
+            const myOrders = await apiFetch(token, `${ORDERS_API}/my-orders`);
+            mainContent.innerHTML = getProfileHTML(currentUser, myOrders); 
+            attachPlanButtonListeners(); 
+        } else {
+            mainContent.innerHTML = `<div class="card full-width"><p>Content for this view is coming soon.</p></div>`;
+        }
     } catch (error) {
         mainContent.innerHTML = `<div class="card full-width error-message"><p>Failed to load view: ${error.message}</p></div>`;
     }
@@ -187,7 +191,7 @@ async function renderUserProfileView(userId) {
     const token = localStorage.getItem('accessToken');
     mainContent.innerHTML = `<div class="card full-width" style="text-align: center;"><div class="spinner"></div></div>`;
     try {
-        const userProfile = await apiFetch(token, `${USERS_API_URL}${userId}/profile`);
+        const userProfile = await apiFetch(token, `${USERS_API}/${userId}/profile`);
         const avatarUrl = userProfile.avatar_url ? `${API_BASE_URL}${userProfile.avatar_url}` : `https://ui-avatars.com/api/?name=${encodeURIComponent(userProfile.name)}&background=random&color=fff&size=128`;
         mainContent.innerHTML = `
             <div class="card full-width" style="max-width: 600px; margin: auto; text-align: center;">
@@ -205,14 +209,9 @@ async function renderUserProfileView(userId) {
     }
 }
 
-// --- 5. HTML TEMPLATE GENERATORS (All functions are complete) ---
+// --- 5. HTML TEMPLATE GENERATORS ---
 function getAIDiagnosisHTML() {
     return `<div class="card full-width"><h3>AI Diagnosis</h3><div class="input-group" style="margin-bottom: 20px; max-width: 300px;"><label for="languageSelect" style="display: block; margin-bottom: 5px; color: var(--text-secondary);">Report Language:</label><select id="languageSelect"><option value="en">English</option><option value="ms">Bahasa Malaysia</option><option value="zh">Chinese (简体中文)</option></select></div><label for="imageUpload" class="diagnosis-uploader"><p>Click here to upload a leaf photo for analysis</p><img id="imagePreview" src="" alt="Image preview" hidden></label><input type="file" id="imageUpload" accept="image/*"><div id="loadingIndicator" class="hidden"><div class="spinner"></div><p>Analyzing... This may take a moment.</p></div><div id="reportContainer"></div></div>`;
-}
-
-function getDiagnosisHistoryHTML(history) {
-    if (!history || history.length === 0) return `<div class="card full-width"><h3>Diagnosis History</h3><p>No diagnosis history found.</p></div>`;
-    return `<div class="view-content">${history.map(item => `<div class="card"><img src="${API_BASE_URL}${item.image_url}" style="width:100%; border-radius:8px; margin-bottom: 15px;"><h4>${item.report_title}</h4><p><strong>Result:</strong> ${item.disease_name} (${(item.confidence * 100).toFixed(2)}%)</p><p style="font-size: 0.9em; color: var(--text-secondary);"><strong>Date:</strong> ${new Date(item.timestamp).toLocaleString()}</p></div>`).join('')}</div>`;
 }
 
 function getPostsHTML(posts) {
@@ -244,22 +243,13 @@ function getShoppingHTML(products) {
     return `<div class="card full-width">${html}</div>`;
 }
 
-function getBusinessProfileHTML(myProducts) {
-    let myProductsHTML = `<h4>My Products</h4>`;
-    if (!myProducts || myProducts.length === 0) {
-        myProductsHTML += `<p>You haven't added any products yet.</p>`;
-    } else {
-        myProductsHTML += myProducts.map(p => `<div class="product-list-item" style="display: flex; gap: 15px; align-items: center; margin-bottom: 10px; border-bottom: 1px solid var(--border-color); padding-bottom: 10px;"><img src="${API_BASE_URL}${p.image_url}" style="width: 50px; height: 50px; border-radius: 4px; object-fit: cover;"><span>${p.name} - RM ${p.price.toFixed(2)}</span></div>`).join('');
-    }
-    return `<div class="view-content"><div class="card"><h3>Income</h3><p>Coming Soon.</p></div><div class="card"><h3>Product Sell Quantity</h3><p>Coming Soon.</p></div><div class="card"><h3>Add Product to Sell</h3><form id="addProductForm"><input type="text" name="name" placeholder="Product Name" required><textarea name="description" placeholder="Description" style="min-height: 80px; resize: vertical;"></textarea><input type="text" name="location" placeholder="Location"><input type="number" name="price" placeholder="Price (RM)" step="0.01" required><label class="file-input-label">Product Picture <input type="file" name="image" class="file-input" required></label><button type="submit" class="glow-button">Add Product</button><p id="product-error" class="error-message"></p></form></div><div class="card full-width">${myProductsHTML}</div></div>`;
-}
-
-function getProfileHTML(user) {
+function getProfileHTML(user, orders) {
     const tier = user.subscription_tier || 'free';
     let planName = 'Free Tier';
     if (tier === 'tier_10') planName = 'Pro (RM10)';
     else if (tier === 'tier_15') planName = 'Pro Plus (RM15)';
     else if (tier === 'tier_20') planName = 'Business Pro (RM20)';
+    
     let planButtonsHTML = '';
     if (user.user_type === 'public') {
         if (tier !== 'tier_10') planButtonsHTML += `<button class="glow-button plan-btn" data-plan="tier_10">Subscribe to RM10 Plan</button>`;
@@ -271,7 +261,158 @@ function getProfileHTML(user) {
     if (tier !== 'free') {
         planButtonsHTML += `<button class="plan-btn-secondary plan-btn" data-plan="free">Downgrade to Free Tier</button>`;
     }
-    return `<div class="card full-width"><h3>My Profile</h3><p><strong>Email:</strong> ${user.email}</p><p><strong>User Type:</strong> ${user.user_type}</p><p><strong>Current Plan:</strong> ${planName}</p><h4 style="margin-top: 30px;">Change Plan</h4><div class="plans" style="display: flex; flex-wrap: wrap; gap: 20px; align-items: center;">${planButtonsHTML}</div><p id="payment-error" class="error-message"></p></div>`;
+
+    let ordersHTML = `<div class="card full-width" style="margin-top: 20px;"><h3>My Orders</h3>`;
+    if (!orders || orders.length === 0) {
+        ordersHTML += `<p>You have not placed any orders yet.</p>`;
+    } else {
+        ordersHTML += orders.map(order => `
+            <div class="order-history-item">
+                <div class="order-header">
+                    <span><strong>Order ID:</strong> #${order.id}</span>
+                    <span><strong>Date:</strong> ${new Date(order.created_at).toLocaleDateString()}</span>
+                    <span><strong>Status:</strong> <span class="order-status">${order.status}</span></span>
+                    <span><strong>Total:</strong> RM ${order.total_amount.toFixed(2)}</span>
+                </div>
+                <div class="order-items">
+                    ${order.items.map(item => `
+                        <div class="order-item">
+                            <img src="${API_BASE_URL}${item.product.image_url}" class="item-image">
+                            <div>
+                                <p><strong>${item.product.name}</strong></p>
+                                <p><small>Quantity: ${item.quantity} @ RM ${item.price_at_purchase.toFixed(2)}</small></p>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+        `).join('');
+    }
+    ordersHTML += `</div>`;
+
+    return `
+        <div class="card full-width">
+            <h3>My Profile</h3>
+            <p><strong>Email:</strong> ${user.email}</p>
+            <p><strong>User Type:</strong> ${user.user_type}</p>
+            <p><strong>Current Plan:</strong> ${planName}</p>
+            <h4 style="margin-top: 30px;">Change Plan</h4>
+            <div class="plans" style="display: flex; flex-wrap: wrap; gap: 20px; align-items: center;">${planButtonsHTML}</div>
+            <p id="payment-error" class="error-message"></p>
+        </div>
+        ${ordersHTML} 
+    `;
+}
+
+function getCombinedHistoryHTML(diagnosisHistory, orderHistory) {
+    let diagnosisHTML = `<div class="card"><h3>Diagnosis History</h3>`;
+    if (!diagnosisHistory || diagnosisHistory.length === 0) {
+        diagnosisHTML += `<p>No diagnosis history found.</p>`;
+    } else {
+        diagnosisHTML += diagnosisHistory.map(item => `
+            <div class="history-item" style="border-bottom: 1px solid var(--border-color); padding-bottom: 15px; margin-bottom: 15px;">
+                <img src="${API_BASE_URL}${item.image_url}" style="width:100%; border-radius:8px; margin-bottom: 15px;">
+                <h4>${item.report_title}</h4>
+                <p><small><strong>Result:</strong> ${item.disease_name} (${(item.confidence * 100).toFixed(2)}%)</small></p>
+                <p><small><strong>Date:</strong> ${new Date(item.timestamp).toLocaleString()}</small></p>
+            </div>
+        `).join('');
+    }
+    diagnosisHTML += `</div>`;
+
+    let ordersHTML = `<div class="card"><h3>Order History</h3>`;
+    if (!orderHistory || orderHistory.length === 0) {
+        ordersHTML += `<p>You have not placed any orders yet.</p>`;
+    } else {
+        ordersHTML += orderHistory.map(order => `
+            <div class="order-history-item">
+                <div class="order-header">
+                    <span><strong>ID:</strong> #${order.id}</span>
+                    <span><strong>Status:</strong> <span class="order-status">${order.status}</span></span>
+                    <span><strong>Total:</strong> RM ${order.total_amount.toFixed(2)}</span>
+                </div>
+                 <div class="order-items">
+                    ${order.items.map(item => `
+                        <div class="order-item">
+                            <img src="${API_BASE_URL}${item.product.image_url}" class="item-image">
+                            <div>
+                                <p><strong>${item.product.name}</strong> (x${item.quantity})</p>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+        `).join('');
+    }
+    ordersHTML += `</div>`;
+    
+    return `<div class="view-content" style="grid-template-columns: 1fr 1fr; align-items: start;">
+                ${diagnosisHTML}
+                ${ordersHTML}
+            </div>`;
+}
+
+function getBusinessProfileHTML(myProducts, salesData) {
+    let totalIncome = 0;
+    let totalQuantitySold = 0;
+    const salesByProduct = {};
+
+    if (salesData && salesData.length > 0) {
+        salesData.forEach(order => {
+            order.items.forEach(item => {
+                if (item.product.seller_id === currentUser.id) {
+                    totalIncome += item.price_at_purchase * item.quantity;
+                    totalQuantitySold += item.quantity;
+                    if (!salesByProduct[item.product.name]) {
+                        salesByProduct[item.product.name] = 0;
+                    }
+                    salesByProduct[item.product.name] += item.quantity;
+                }
+            });
+        });
+    }
+
+    let salesQuantityHTML = `<p>Total items sold: ${totalQuantitySold}</p>`;
+    if (Object.keys(salesByProduct).length > 0) {
+        salesQuantityHTML += '<ul>';
+        for (const productName in salesByProduct) {
+            salesQuantityHTML += `<li>${productName}: ${salesByProduct[productName]} sold</li>`;
+        }
+        salesQuantityHTML += '</ul>';
+    } else {
+        salesQuantityHTML += `<p>No sales yet.</p>`;
+    }
+
+    let myProductsHTML = `<h4>My Products</h4>`;
+    if (!myProducts || myProducts.length === 0) {
+        myProductsHTML += `<p>You haven't added any products yet.</p>`;
+    } else {
+        myProductsHTML += myProducts.map(p => `<div class="product-list-item" style="display: flex; gap: 15px; align-items: center; margin-bottom: 10px; border-bottom: 1px solid var(--border-color); padding-bottom: 10px;"><img src="${API_BASE_URL}${p.image_url}" style="width: 50px; height: 50px; border-radius: 4px; object-fit: cover;"><span>${p.name} - RM ${p.price.toFixed(2)}</span></div>`).join('');
+    }
+    
+    return `<div class="view-content">
+                <div class="card">
+                    <h3>Income</h3>
+                    <p class="stat-large" style="font-size: 2em; font-weight: bold; color: var(--primary-glow);">RM ${totalIncome.toFixed(2)}</p>
+                </div>
+                <div class="card">
+                    <h3>Product Sell Quantity</h3>
+                    ${salesQuantityHTML}
+                </div>
+                <div class="card">
+                    <h3>Add Product to Sell</h3>
+                    <form id="addProductForm">
+                        <input type="text" name="name" placeholder="Product Name" required>
+                        <textarea name="description" placeholder="Description" style="min-height: 80px; resize: vertical;"></textarea>
+                        <input type="text" name="location" placeholder="Location">
+                        <input type="number" name="price" placeholder="Price (RM)" step="0.01" required>
+                        <label class="file-input-label">Product Picture <input type="file" name="image" class="file-input" required accept="image/*"></label>
+                        <button type="submit" class="glow-button">Add Product</button>
+                        <p id="product-error" class="error-message"></p>
+                    </form>
+                </div>
+                <div class="card full-width">${myProductsHTML}</div>
+            </div>`;
 }
 
 function renderReport(data) {
@@ -292,7 +433,7 @@ async function renderChatView(targetUserId = null) {
     connectWebSocket(token);
     const userListDiv = document.getElementById('user-list');
     try {
-        const users = await apiFetch(token, USERS_API_URL);
+        const users = await apiFetch(token, `${USERS_API}/`);
         userListDiv.innerHTML = users.map(user => `<div class="user-list-item" data-user-id="${user.id}" data-user-name="${user.profile.name}"><img src="https://ui-avatars.com/api/?name=${encodeURIComponent(user.profile.name)}&background=random&color=fff" class="avatar"><span>${user.profile.name}</span></div>`).join('');
         document.querySelectorAll('.user-list-item').forEach(item => {
             item.addEventListener('click', () => {
@@ -323,7 +464,7 @@ async function openChat(userId, userName) {
     document.querySelectorAll('.user-list-item').forEach(item => item.classList.remove('active'));
     document.querySelector(`.user-list-item[data-user-id='${userId}']`).classList.add('active');
     try {
-        const history = await apiFetch(token, `${CHAT_API_URL}/history/${userId}`);
+        const history = await apiFetch(token, `${CHAT_API}/history/${userId}`);
         messagesDiv.innerHTML = '';
         if (history.length === 0) {
             messagesDiv.innerHTML = '<p class="chat-placeholder">This is the beginning of your conversation.</p>';
@@ -361,23 +502,12 @@ function appendMessage(content, type) {
 function connectWebSocket(token) {
     if (websocket && websocket.readyState === WebSocket.OPEN) return;
 
-    // 【【【 核心修复：智能判断使用 ws:// 还是 wss:// 】】】
-    
-    // 1. 获取后端服务器的主机名 (例如: juliette-unattempted-tammara.ngrok-free.dev)
     const backendHost = API_BASE_URL.replace('https://', '').replace('http://', '');
-
-    // 2. 判断当前页面是否是 HTTPS
     const isSecure = window.location.protocol === 'https:';
-
-    // 3. 根据页面安全协议，选择对应的 WebSocket 协议
     const wsProtocol = isSecure ? 'wss' : 'ws';
-
-    // 4. 构建最终的、正确的 WebSocket URL
     const wsUrl = `${wsProtocol}://${backendHost}/chat/ws?token=${token}`;
     
-    // 【【【 修复结束 】】】
-
-    console.log(`Attempting to connect to WebSocket at: ${wsUrl}`); // 添加日志方便调试
+    console.log(`Attempting to connect to WebSocket at: ${wsUrl}`);
 
     websocket = new WebSocket(wsUrl);
     websocket.onopen = () => console.log("WebSocket connected!");
@@ -441,7 +571,7 @@ function showOrderModal(product) {
         }
         const orderData = { recipient_name: formData.get('recipient_name'), recipient_phone: formData.get('recipient_phone'), shipping_address: formData.get('shipping_address'), items: [{ product_id: parseInt(product.id), quantity: parseInt(formData.get('quantity')) }] };
         try {
-            const result = await apiFetch(token, ORDERS_API_URL, { method: 'POST', body: JSON.stringify(orderData) });
+            const result = await apiFetch(token, `${ORDERS_API}/`, { method: 'POST', body: JSON.stringify(orderData) });
             alert(`Purchase successful! Your order ID is #${result.id}.`);
             closeModal();
         } catch (error) {
@@ -451,7 +581,6 @@ function showOrderModal(product) {
 }
 
 // --- 6. EVENT LISTENERS & INTERACTION LOGIC ---
-
 function attachNavListeners() {
     document.querySelectorAll('nav a, nav button').forEach(link => {
         link.addEventListener('click', (e) => {
@@ -460,7 +589,11 @@ function attachNavListeners() {
                 alert('This feature is not available for your current subscription plan.');
                 return;
             }
-            renderView(e.currentTarget.dataset.view);
+            const viewId = e.currentTarget.dataset.view;
+            const url = new URL(window.location);
+            url.searchParams.set('view', viewId);
+            window.history.pushState({}, '', url);
+            renderView(viewId);
         });
     });
 }
@@ -496,7 +629,7 @@ async function getGPSAndDiagnose(file) {
             formData.append("longitude", longitude);
             formData.append("language", document.getElementById('languageSelect').value);
             try {
-                const data = await apiFetch(token, DIAGNOSE_API_URL, { method: 'POST', body: formData });
+                const data = await apiFetch(token, DIAGNOSE_API, { method: 'POST', body: formData });
                 renderReport(data);
             } catch (error) {
                 reportContainer.innerHTML = `<p class="error-message">${error.message}</p>`;
@@ -522,16 +655,9 @@ function attachPlanButtonListeners() {
             const planDisplayName = plan === 'free' ? 'Free Tier' : plan.replace('tier_', 'RM ');
             if (!confirm(`Are you sure you want to switch to the ${planDisplayName} plan?`)) return;
             try {
-                // 1. 发送请求并获取最新的用户信息
-                currentUser = await apiFetch(token, SUBSCRIPTION_API_URL, { method: 'PUT', body: JSON.stringify({ plan: plan }) });
-                
-                // 2. 弹出成功提示
+                currentUser = await apiFetch(token, `${USERS_API}/me/subscription`, { method: 'PUT', body: JSON.stringify({ plan: plan }) });
                 alert('Plan updated successfully!');
-    
-                // 3. 【【【 核心修复 】】】
-                //    使用最新的 currentUser 数据，重新渲染整个仪表盘界面
-                renderDashboard(currentUser); 
-            
+                renderDashboard(currentUser);
             } catch (error) {
                 errorP.textContent = `Failed to update plan: ${error.message}`;
             }
@@ -576,7 +702,7 @@ function attachPostListeners() {
         postForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             try {
-                await apiFetch(token, POSTS_API_URL, { method: 'POST', body: new FormData(postForm) });
+                await apiFetch(token, `${POSTS_API}/`, { method: 'POST', body: new FormData(postForm) });
                 renderView('posts');
             } catch (error) {
                 document.getElementById('post-error').textContent = `Failed to post: ${error.message}`;
@@ -592,7 +718,7 @@ function attachPostListeners() {
                 const content = commentForm.querySelector('input[name="content"]').value;
                 if (!content.trim()) return;
                 try {
-                    await apiFetch(token, `${POSTS_API_URL}${postId}/comments/`, { method: 'POST', body: JSON.stringify({ content: content }) });
+                    await apiFetch(token, `${POSTS_API}/${postId}/comments/`, { method: 'POST', body: JSON.stringify({ content: content }) });
                     renderView('posts');
                 } catch (error) {
                     alert(`Failed to comment: ${error.message}`);
@@ -603,7 +729,7 @@ function attachPostListeners() {
         if (likeBtn) {
             likeBtn.addEventListener('click', async () => {
                 try {
-                    await apiFetch(token, `${POSTS_API_URL}${postId}/like`, { method: 'POST' });
+                    await apiFetch(token, `${POSTS_API}/${postId}/like`, { method: 'POST' });
                     renderView('posts');
                 } catch (error) {
                     alert(`Failed to like post: ${error.message}`);
@@ -649,7 +775,7 @@ function attachAddProductListeners() {
             const errorP = document.getElementById('product-error');
             errorP.textContent = '';
             try {
-                await apiFetch(token, PRODUCTS_API_URL, { method: 'POST', body: new FormData(productForm) });
+                await apiFetch(token, `${PRODUCTS_API}/`, { method: 'POST', body: new FormData(productForm) });
                 alert('Product added successfully!');
                 renderView('business-profile');
             } catch (error) {
