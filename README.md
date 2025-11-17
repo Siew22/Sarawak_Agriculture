@@ -173,25 +173,32 @@ cd Sarawak-Agriculture-main
 ### **2. Configure Environment Variables**
 
 In the project's root directory, create a file named `.env`. Copy the content from `.env.example` (if it exists) or use the template below. **This is a critical step.**
-.env file
---- Database Configuration ---
-These are for the MySQL container inside Docker
+
+```ini
+# .env file
+
+# --- Database Configuration ---
+# These are for the MySQL container inside Docker
 DB_HOST=db
 DB_PORT=3306
 DB_USER=root
-DB_PASSWORD="your_strong_secret_password" # <-- IMPORTANT: Replace with your password
+DB_PASSWORD="your_strong_secret_password"  # <-- IMPORTANT: Replace with your password
 DB_NAME="sarawak_agri_prod"
---- Backend Application Settings ---
+
+# --- Backend Application Settings ---
 PROJECT_NAME="Sarawak Agri-Advisor"
 CONFIDENCE_THRESHOLD=0.75
---- External API Keys ---
-SERPAPI_KEY=""
+
+# --- External API Keys ---
+SERPAPI_KEY="" 
 NGROK_AUTHTOKEN="YOUR_NGROK_AUTHTOKEN" # <-- IMPORTANT: Get from https://dashboard.ngrok.com/get-started/your-authtoken
---- Email Configuration (for local debug server) ---
+
+# --- Email Configuration (for local debug server) ---
 SMTP_SERVER=mail
 SMTP_PORT=8025
 SENDER_EMAIL="noreply@sarawak-agri.dev"
---- CORS Settings (for development) ---
+
+# --- CORS Settings (for development) ---
 ALLOWED_ORIGINS="https://sarawak-agriculture.vercel.app,https://*.vercel.app,http://localhost:8080,http://127.0.0.1:8080"
 
 **Important:**
